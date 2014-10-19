@@ -21,15 +21,7 @@ server.listen(port, function(err){
 var io = socket.listen(server, {log: true});
 var sockets = io.sockets;
 
-//CORS middleware
-var allowCrossDomain = function(req, res, next) {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-    // res.header('Access-Control-Allow-Headers', 'Content-Type');
-
-    next();
-}
-app.use(allowCrossDomain);
+io.set( 'origins', '*:*' );
 
 // Serve static files
 app.use('/public', express.static(__dirname + '/public'));
