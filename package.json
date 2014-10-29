@@ -1,0 +1,31 @@
+{
+  "name": "Speez",
+  "version": "0.0.0-1",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www",
+    "postinstall": "./node_modules/bower/bin/bower install"
+  },
+  "config": {
+    "unsafe-perm": true
+  },
+  "dependencies": {
+    "express.io": "1.1.13",
+    "express.io-middleware": "0.9.4",
+    "static-favicon": "~1.0.0",
+    "morgan": "~1.0.0",
+    "cookie-parser": "~1.0.1",
+    "body-parser": "~1.0.0",
+    "debug": "~0.7.4",
+    "jade": "~1.3.0",
+    "mongodb": "*",
+    "mongoose": "*",
+    "mongoose-random": "*",
+    "passport": "*",
+    "passport-http": "*",
+    "bcrypt-nodejs": "*",
+    "underscore": "*",
+    "bower": "*",
+    "node-uuid": "1.4.1"
+  }
+}

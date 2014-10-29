@@ -1,0 +1,63 @@
+var express = require('express.io');
+var path = require('path');
+var favicon = require('static-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+var speed = require('./routes/speed/game');
+
+app = express();
+app.http().io();
+require('express.io-middleware')(app);
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+// uncomment after placing your favicon in /public
+// app.use(favicon(__dirname + '/public/favicon.ico'));
+// app.use(logger('debug'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use('/bower_components', express.static(path.join(__dirname, 'bower_components')));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Routing to endpoints
+var indexRoutes = require('./routes/index');
+app.use('/', indexRoutes);
+app.get('/partials/:name', indexRoutes.partials);
+speed.getRoutes(app);
+
+// error handlers
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+    var err = new Error('Not Found');
+    err.status = 404;
+    next(err);
+});
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+    app.use(function(err, req, res, next) {
+        res.status(err.status || 500);
+        res.render('error', {
+            message: err.message,
+            error: err
+        });
+    });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', {
+        message: err.message,
+        error: {}
+    });
+});
+
+module.exports = app;

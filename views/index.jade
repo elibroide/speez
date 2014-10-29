@@ -1,0 +1,42 @@
+extends layout
+
+block scripts
+	script(src='/socket.io/socket.io.js')
+	script(src='/bower_components/jquery/jquery.min.js')
+	script(src='/bower_components/underscore/underscore-min.js')
+	script(src='/bower_components/signals/dist/signals.min.js')
+
+	// greensock
+	script(src='/js/external/ColorPropsPlugin.min.js')
+	script(src='/js/external/EasePack.min.js')
+	script(src='/js/external/TweenLite.min.js')
+	script(src='/js/external/TimelineLite.min.js')
+	script(src='/js/external/phaser.js')
+
+	// Game
+	script(src='/js/client.js')
+	script(src='/js/common.js')
+
+	// Layout
+	script(src='/js/layout/layout.js')
+	script(src='/js/layout/layoutPhaser.js')
+
+	// Components
+	script(src='/js/components/board.js')
+	script(src='/js/components/card.js')
+	script(src='/js/components/colorBox.js')
+	script(src='/js/components/header.js')
+	script(src='/js/components/incoming.js')
+	script(src='/js/components/menuButton.js')
+	script(src='/js/components/playerLobby.js')
+	script(src='/js/components/timerBall.js')
+
+	// States
+	script(src='/js/states/boot.js')
+	script(src='/js/states/main.js')
+	script(src='/js/states/lobby.js')
+	script(src='/js/states/stage.js')
+	script(src='/js/states/player.js')
+
+
+block content
