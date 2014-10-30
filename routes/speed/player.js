@@ -13,7 +13,7 @@ module.exports = {
 		if(!req.stage.setReady(req.player, req.data.isReady)){
 			return;
 		}
-		var options = { cardCount: 1, boardCount: 2 };
+		var options = { cardCount: 15, boardCount: 2 };
 		req.stage.setConfig(options);
 		_.each(_.keys(req.stage.players), function(key){
 			var player = req.stage.players[key];
