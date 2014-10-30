@@ -1,13 +1,9 @@
 // player.js
 
-var playerState;
-
-(function(){
+var playerState = (function(){
 
 	// data
 	var lastCards;
-	var library;
-	var hand;
 
 	// gui
 	var header;
@@ -15,6 +11,7 @@ var playerState;
 	var hand;
 	var colors;
 	var playerArea;
+	var hand;
 	var container;
 
 	var headerHeight;
@@ -30,13 +27,13 @@ var playerState;
 
 	function drawGui(){
 		// sizes
-		headerHeight = originalWidth * 0.125;
-		gameHeight = originalWidth - headerHeight;
+		headerHeight = originalHeight * 0.125;
+		gameHeight = originalHeight - headerHeight;
 		gameHeightCenter = gameHeight / 2;
 		boardMiddle = gameHeightCenter + headerHeight;
 		boardWidth = 150;
 		boardWidthCenter = boardWidth * 0.5;
-		boardWidthRight = originalHeight - boardWidth;
+		boardWidthRight = originalWidth - boardWidth;
 		cardHeight = gameHeight / 5;
 
 		boards = [];
@@ -79,12 +76,12 @@ var playerState;
 		timeline.add(_.invoke(hand, 'appearCard'), null, null, 0.2);
 
 		// Content
-		playerArea = new com.LayoutArea(0, 0, originalHeight, originalWidth, { isDebug: false });
+		playerArea = new com.LayoutArea(0, 0, originalWidth, originalHeight, { isDebug: false });
 		container = game.add.sprite();
-		playerArea.attach(container, { width: originalHeight, height: originalWidth });
+		playerArea.attach(container, { width: originalWidth, height: originalHeight });
 
 		// header
-		header = new com.speez.components.Header(originalHeight, headerHeight, {
+		header = new com.speez.components.Header(originalWidth, headerHeight, {
 			text: getHeaderText(),
 			color: 0xffffff,
 		});
@@ -101,6 +98,7 @@ var playerState;
 		}
 
 		socket.on('speed:player:start', handleStart);
+		socket.on('speed:player:winner', handleWinner);
 		socket.emit('speed:player:loaded');
 	}
 
@@ -124,6 +122,43 @@ var playerState;
 		drawGui();
 	}
 
+	function handleWinner(data){
+		var timeline = new TimelineLite();
+		var dissipateTime = 1;
+		player.game.winner = data.winner;
+		if(data.winner){
+			// play winner animation
+			_.invoke(hand, 'unattach');
+			var distance = 150;
+			var speezTime = 1;
+			timeline.to(hand[0], speezTime, { x: 150 - distance * 2, y: hand[2].y }, 0);
+			timeline.to(hand[1], speezTime, { x: 150 - distance, y: hand[2].y }, 0);
+			timeline.to(hand[3], speezTime, { x: 150 + distance, y: hand[2].y }, 0);
+			timeline.to(hand[4], speezTime, { x: 150 + distance * 2, y: hand[2].y }, 0);
+			timeline.to(boards, speezTime, { alpha: 0 }, 0);
+			var texts = _.pluck(hand, 'text');
+			timeline.to(_.pluck(texts, 'scale'), speezTime, { x: 1, y: 1 }, 0);
+			// blank
+			timeline.to(hand, speezTime, { delay: 1 });
+			timeline.addLabel('dissipate');
+		} else {
+			// play looser animation
+			_.invoke(hand, 'reject')
+			_.invoke(hand, 'enable', false)
+			timeline.to(boards, dissipateTime, { alpha: 0 }, 0);
+			timeline.addLabel('dissipate');
+		}
+		timeline.to(container, dissipateTime, { alpha: 0 }, 'dissipate');
+		timeline.to(hand, dissipateTime, { alpha: 0 }, 'dissipate');
+		timeline.add(function() {
+			common.tweenStageColor(0x000000, function(){
+				setTimeout(function(){ 
+					game.state.start('playerFinish'); 
+				}, 500);
+			});
+		}, 'dissipate');
+	}
+
 	function handleCard(data){
 		_.invoke(hand, 'enable', true);
 		if(!data.confirm){
@@ -136,6 +171,7 @@ var playerState;
 			// timeline.add(_.invoke(hand, 'shake'), '-=0.75', null, 0.05);
 			return;
 		}
+		player.game.cardCount--;
 		var isEmpty = library.length === 0;
 		var newCard = drawCard(heldCard.index, false);
 		newCard.startCard();
@@ -181,38 +217,37 @@ var playerState;
 	}
 
 	function getHeaderText(){
-		return player.name + ' - ' + (player.game.library.length + lastCards);
+		return player.name + ' - ' + player.game.cardCount;
 	}
 
 	// test
 
 	function setTest(){
-		var library = [];
-		for (var i = 0; i < 15; i++) {
-			library.push(_.random(0, 9));
-		};
-		game.player = {library: library};
-
 		handleStart();
 	}
 
 	function testCardPut(card, boardId){
-		if(boardId === 0){
+		if(boardId === 0 || boardId === 2){
 			// reject
 			handleCard({ confirm: true });
+			if(lastCards === 0){
+				setTimeout(function(){
+					handleWinner({winner: false});
+				}, 1000);
+			}
 			return;
 		}
 		handleCard({ confirm: false });
 	}
 
-	playerState = {
+	return {
 
 		preload: function(){
 
 			layout = new Layout({
 				game: game,
-	        	width: originalHeight,
-	        	height: originalWidth,
+	        	width: originalWidth,
+	        	height: originalHeight,
 	        	isDebug: false,
 			});
 			Layout.instance.resize(game.width, game.height);
@@ -226,7 +261,9 @@ var playerState;
 		update: function(){
 		},
 
-		render: function(){
+		shutdown: function(){
+			socket.off('speed:player:start', handleStart);
+			socket.off('speed:player:winner', handleWinner);
 		},
 	}
 })();

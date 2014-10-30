@@ -1,11 +1,9 @@
 // boot.js
 
-var bootState;
-(function(){
+var bootState = (function(){
 
 	function setSocket(){
 		//// Local
-		config.address = document.URL;
 		console.log('Trying to connect to ' + config.address)
 
 		socket = io.connect(config.address);
@@ -37,15 +35,16 @@ var bootState;
 	  	}
 	}
 
-	bootState = {
+	return {
 		preload: function(){
+			
 		},
 
 		create: function(){
 			setSocket();
 
 			setScale();
-			
+
             game.state.start('main');
 		},
 

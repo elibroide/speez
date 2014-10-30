@@ -10,7 +10,7 @@ com.speez.components.Board = (function(){
 			height: height,
 			color: color,
 			cardFormat: {
-				font: "200px Arial",
+				font: "300px Arial",
 		        fill: "#ffffff",
 		        align: "center"
 			},
@@ -74,11 +74,14 @@ com.speez.components.Board = (function(){
 	// public methods
 
 	Board.prototype.appear = function(color) {
-
 		this.background.graphicsData[0].fillColor = color;
 		var timeline = new TimelineLite();
 		timeline.to(this, this.options.appearTime, { colorProps: { backgroundColor: this.options.color }, ease: Bounce.easeOut }, 0);
     	return timeline;
+	};
+
+	Board.prototype.tweenColor = function(color, time) {
+		return TweenLite.to(this, time, { colorProps: { backgroundColor: this.options.color }, ease: Sine.easeInOut }, 0)
 	};
 
 	Board.prototype.backgroundColor = function(color) {

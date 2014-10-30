@@ -1,8 +1,5 @@
 // stage.js
-// WHEN Speez goes up, the colors change
-var lobbyState;
-
-(function(){
+var lobbyState = (function(){
 
 	// gui
 	var header;	
@@ -115,6 +112,12 @@ var lobbyState;
 
 	function handleStartGameClick(){
         game.state.start('stage');
+        var i = 0;
+        _.each(_.keys(stage.players), function(key){
+        	var player = stage.players[key];
+        	player.icon = getAvailableIcon();
+			player.icon.setPlayer(data.name);
+        });
 	}
 
 	// socket handlers
@@ -125,6 +128,15 @@ var lobbyState;
 			players: [],
 		};
 		drawGui();
+	}
+
+	function handleNextLobby(data) {
+		drawGui();
+		_.each(_.keys(stage.players), function(key){
+			var player = stage.players[key];
+			player.icon = getAvailableIcon();
+			player.icon.setPlayer(player.name);
+		})
 	}
 
 	function handleJoin(data){
@@ -163,7 +175,7 @@ var lobbyState;
 		game.state.start('stage');
 	}
 
-	lobbyState = {
+	return {
 
 		preload: function(){
 		},
@@ -183,7 +195,11 @@ var lobbyState;
 			socket.on('speed:stage:ready', handleReady);
 			socket.on('speed:stage:load', handleLoad);
 			
-			socket.emit('speed:create', null, handleIdentify)
+			if(stage){
+				socket.emit('speed:stage:nextLobby', null, handleNextLobby);
+			} else {
+				socket.emit('speed:create', null, handleIdentify)
+			}
 		},
 
 		update: function(){
@@ -195,10 +211,10 @@ var lobbyState;
 		},
 
 		shutdown: function(){
-			socket.off('speed:stage:join');
-			socket.off('speed:stage:leave');
-			socket.off('speed:stage:ready');
-			socket.off('speed:stage:load');
+			socket.off('speed:stage:join', handleJoin);
+			socket.off('speed:stage:leave', handleLeave);
+			socket.off('speed:stage:ready', handleReady);
+			socket.off('speed:stage:load', handleLoad);
 		},
 
 	}

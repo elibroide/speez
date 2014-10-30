@@ -92,11 +92,18 @@ var common = {
 	    return colorTween;
 	},
 
-	tweenStageColor: function(color, complete){
-		var tween = common.tweenTint(function(color){
-			game.stage.backgroundColor = color;
-		}, game.stage.backgroundColor, color, 500)
-		tween.onComplete.add(complete);
+	tweenStageColor: function(color, complete, time){
+		if(time === undefined){
+			time = 0.5;
+		}
+		return TweenLite.to(common, time, { colorProps: { stageColor: color }, onComplete: complete });
+	},
+
+	stageColor: function(color){
+		if(color !== undefined){
+			game.stage.backgroundColor = common.getRgb(color);
+		}
+		return game.stage.backgroundColor;
 	},
 
 	tweenSpin: function(obj, time, options){

@@ -73,20 +73,28 @@ var stageState;
 		socket.emit('speed:stage:play');
 	}
 
-	function handleFinishTimerBallExpand(){
-		incoming.show([ stage.players[stage.game.winner].name, 'Is', 'The', 'WINNER'], {
+	function handleWinnerTimerBallExpand(){
+		var texts = [ 'SPEEZ', 'Complete', '', 'The', 'Winner', 'Is' ];
+		if(config.isTest){
+			texts = ['test'];
+		}
+		incoming.show(texts, {
 			isTexts: true,
-			// complete: handleIncomingComplete,
+			complete: function(){
+				_.delay(function(){ game.state.start('stageFinish') }, 1);
+			},
 			completeTime: 1,
 		});
-		// timerBall.setCard(0xffffff, true);
-		// game.state.start('stageFinish');
 	}
 
 	// handling socket
 
 	function handleStart(){
-		incoming.show([ 'Get', 'Ready', '5', '4', '3', '2', '1', 'SPEEZ' ], {
+		var texts = [ 'Get', 'Ready', '5', '4', '3', '2', '1', 'SPEEZ' ];
+		if(config.isTest){
+			texts = ['test'];
+		}
+		incoming.show(texts, {
 			isTexts: true,
 			complete: handleIncomingComplete,
 			completeTime: 1,
@@ -103,16 +111,17 @@ var stageState;
 		timerBall.setCard(boards[data.boardId].options.color);
 	}
 
-	function handleFinish(data){
+	function handleWinner(data){
 		stage.game.winner = data.winner;
-		timerBall.expand(handleFinishTimerBallExpand);
+		timerBall.expand(handleWinnerTimerBallExpand);
 	}
 
 	// other
 
 	function doSpeedy(){
 		if(config.isTest){
-			handleSpeedy({ boards: generateBoards() });
+			handleWinner({ winner: 0 });
+			// handleSpeedy({ boards: generateBoards() });
 			return;
 		}
 		socket.emit('speed:stage:speedy', null, handleSpeedy);
@@ -197,7 +206,7 @@ var stageState;
 			
 			socket.on('speed:stage:start', handleStart);
 			socket.on('speed:stage:card', handleCard);
-			socket.on('speed:stage:finish', handleFinish);
+			socket.on('speed:stage:winner', handleWinner);
 			socket.emit('speed:stage:loaded');
 		},
 
@@ -205,8 +214,10 @@ var stageState;
 
 		},
 
-		render: function(){
-
+		shutdown: function(){
+			socket.off('speed:stage:start', handleStart);
+			socket.off('speed:stage:card', handleCard);
+			socket.off('speed:stage:winner', handleWinner);
 		},
 
 	}

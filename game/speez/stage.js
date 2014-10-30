@@ -39,11 +39,17 @@ Stage.prototype.leave = function(player) {
 	delete this.players[player.id];
 };
 
-Stage.prototype.setReady = function(player) {
+Stage.prototype.setReady = function(player, isReady) {
+	player.isReady = isReady;
 	var keys = _.keys(this.players);
-	return keys.length > 0 && _.every(keys, function(key){
+	console.log('here');
+	if(keys.length > 0 && _.every(keys, function(key){
 		return this.players[key].isReady;
-	}.bind(this))
+	}.bind(this))) {
+		this.restoreReady();
+		return true;
+	}
+	return false;
 };
 
 Stage.prototype.setConfig = function(config) {
@@ -79,9 +85,27 @@ Stage.prototype.setLoaded = function(player) {
 	} else {
 		this.players[player.id].isLoaded = true;
 	}
-	return this.isLoaded && _.every(_.keys(this.players), function(key){
+	var keys = _.keys(this.players);
+	if(this.isLoaded && _.every(_.keys(this.players), function(key){
 		return this.players[key].isLoaded;
-	}.bind(this))
+	}.bind(this))){
+		this.restoreLoaded();
+		return true;
+	}
+	return false;
+};
+
+Stage.prototype.restoreReady = function() {
+	_.each(_.keys(this.players), function(key){
+		this.players[key].isReady = false;
+	}.bind(this));
+}
+
+Stage.prototype.restoreLoaded = function() {
+	_.each(_.keys(this.players), function(key){
+		this.players[key].isLoaded = false;
+	}.bind(this));
+	this.isLoaded = false;
 };
 
 Stage.prototype.startGame = function() {

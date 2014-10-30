@@ -20,7 +20,7 @@ com.speez.components.Card = (function(){
 			colorTime: 0.1,
 			placeCardTime: 0.5,
 			format: {
-		        font: "100px Arial",
+		        font: "200px Arial",
 		        fill: "#eeeeee",
 		        align: "center"
 		    },
@@ -69,6 +69,7 @@ com.speez.components.Card = (function(){
 
 	    // Adding Text
 	    this.text = new Phaser.Text(game, options.width * 0.5, options.height * 0.5, options.waitCard, options.format);
+	    this.text.scale.set(0.5, 0.5);
 	    this.text.anchor.set(0.5, 0.5);
 	    this.container.addChild(this.text);
 
@@ -126,7 +127,6 @@ com.speez.components.Card = (function(){
 		if(this.options.waitCard !== '+' || !this.input.isDragged){
 			return;
 		}
-		console.log('yo');
 		var threshold = getThreshold.bind(this)(this.x, this.background.world.y);
 		if(this.thresholdHit === threshold){
 			return;
@@ -241,6 +241,10 @@ com.speez.components.Card = (function(){
 		timeline.add(this.background.tweenColor(this.options.color, completeTime / 4), completeTime / 4);
 		timeline.timeScale(1.5);
 		return timeline;
+	};
+
+	Card.prototype.unattach = function() {
+		this.area.unattach(this.container);
 	};
 
 	Card.prototype.enable = function(isEnabled) {

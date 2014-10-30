@@ -110,6 +110,9 @@ function create(req){
 	req.io.respond({
 		id: stage.id,
 	});	
+	stage.broadcast = function(id, data, func){
+		this.socket.broadcast.to(this.roomId).emit(id, data, func);
+	}
 }
 
 function join(req){

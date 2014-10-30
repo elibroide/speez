@@ -2,9 +2,9 @@ extends layout
 
 block scripts
 	script(src='/socket.io/socket.io.js')
-	script(src='/bower_components/jquery/jquery.min.js')
-	script(src='/bower_components/underscore/underscore-min.js')
-	script(src='/bower_components/signals/dist/signals.min.js')
+	script(src='/js/external/jquery.min.js')
+	script(src='/js/external/underscore-min.js')
+	script(src='/js/external/signals.min.js')
 
 	// greensock
 	script(src='/js/external/ColorPropsPlugin.min.js')
@@ -36,7 +36,9 @@ block scripts
 	script(src='/js/states/main.js')
 	script(src='/js/states/lobby.js')
 	script(src='/js/states/stage.js')
+	script(src='/js/states/stageFinish.js')
 	script(src='/js/states/player.js')
+	script(src='/js/states/playerFinish.js')
 
 
 block content

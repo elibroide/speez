@@ -54,6 +54,7 @@ com.speez.components.Incoming = (function(){
 			fadeOutDelayTime: 1,
 			fadeOutTime: 0.5,
 			stagger: 1,
+			delay: 0,
 		}, options);
 
 		if(options.isTexts){
@@ -67,7 +68,7 @@ com.speez.components.Incoming = (function(){
 			item.alpha = 0;
 		}.bind(this));
 
-		var timeline = new TimelineLite();
+		var timeline = new TimelineLite({ delay: options.delay });
 		timeline.staggerTo(items, options.fadeInTime, { alpha: 1, onStart: tweenStart, onStartParams: [this] }, options.stagger, 0);
 		timeline.staggerTo(scales, options.time, { x: options.toScale, y: options.toScale }, options.stagger, 0);
 		timeline.staggerTo(items, options.fadeOutTime, { alpha: 0, delay: options.fadeOutDelayTime, onComplete: tweenComplete, onCompleteParams: [this] }, options.stagger, 0);

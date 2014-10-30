@@ -1,9 +1,6 @@
 // main.js
 
-var mainState;
-var graphics;
-
-(function(){
+var mainState = (function(){
 	
 	// data
 	var isReady;
@@ -99,6 +96,7 @@ var graphics;
 		var colors = ["0xbf00d8", "0xd84100", "0xdbaf00", "0xa1ff00", "0x00c8cc", "0x0065bf"];
 		colors = _.shuffle(colors);
 		player = {
+			winner: true,
 			name: 'Cow',
 			game: {
 				boardCount: 2,
@@ -109,10 +107,11 @@ var graphics;
 					{ color: colors[1] },
 					{ color: colors[2] },
 					{ color: colors[3] },
-				]
+				],
+				cardCount: 5,
 			}
 		}
-		for(var i = 0; i < 6; i++){
+		for(var i = 0; i < player.game.cardCount; i++){
 			player.game.library.push(_.random(0,9));
 		}
 		// set test
@@ -197,8 +196,9 @@ var graphics;
 	}
 
 	function handleLoad(data){
-		console.log(data);
+		console.log("YOYOYO MAIN IS IN THE HOUSE");
 		player.game = data;
+		player.game.cardCount = data.library.length;
 		toggleLobby(false);
 		common.tweenStageColor(0xffffff, function(){
 			setTimeout(function(){ game.state.start('player'); }, 500);
@@ -228,7 +228,7 @@ var graphics;
 		});
 	}
 
-	mainState = {
+	return {
 
 		preload: function() {
 		},
@@ -263,9 +263,8 @@ var graphics;
 		},
 
 		shutdown: function(){
-			socket.off('speed:player:join');
-			socket.off('speed:player:leave');
-			socket.off('speed:player:load');
+			socket.off('speed:player:leave', handleLeave);
+			socket.off('speed:player:load', handleLoad);
 		},
 
 		resize: function (width, height) {

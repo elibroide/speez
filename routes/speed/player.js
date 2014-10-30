@@ -6,15 +6,14 @@ var Stage = require(gamePath + 'stage');
 
 module.exports = {
 	ready: function(req){
-		req.player.isReady = req.data.isReady;
 		req.stage.socket.emit('speed:stage:ready', {
 			id: req.player.id,
 			isReady: req.player.isReady,
 		});
-		if(!req.stage.setReady(req.player)){
+		if(!req.stage.setReady(req.player, req.data.isReady)){
 			return;
 		}
-		var options = { cardCount: 15, boardCount: 2 };
+		var options = { cardCount: 1, boardCount: 2 };
 		req.stage.setConfig(options);
 		_.each(_.keys(req.stage.players), function(key){
 			var player = req.stage.players[key];
@@ -37,7 +36,7 @@ module.exports = {
 			return;
 		}
 		req.stage.startGame();
-		req.io.room(req.stage.roomId).broadcast('speed:player:start');
+		req.stage.broadcast('speed:player:start');
 		req.stage.socket.emit('speed:stage:start');
 	},
 
@@ -58,15 +57,23 @@ module.exports = {
 			_.each(_.keys(req.stage.players), function(key){
 				var player = req.stage.players[key];
 				if(player.id === win){
-					player.socket.emit('speed:player:finish', { isWin: true });
+					player.socket.emit('speed:player:winner', { winner: true });
 				} else {
-					player.socket.emit('speed:player:finish', { isWin: false });
+					player.socket.emit('speed:player:winner', { winner: false });
 				}
 			});
-			req.stage.socket.emit('speed:stage:finish', { winner: win});
+			req.stage.socket.emit('speed:stage:winner', { winner: win});
 		} else {
 			req.stage.socket.emit('speed:stage:card', { boardId: req.data.boardId, card: card, playerId: req.player.id });
 		}
+	},
+
+	next: function(req){
+		if(!req.stage.setLoaded(req.player)){
+			return;
+		}
+		req.stage.broadcast('speed:player:next');
+		req.stage.socket.emit('speed:stage:next');
 	},
 
     test: function(req) {

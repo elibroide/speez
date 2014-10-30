@@ -67,7 +67,7 @@ com.speez.components.PlayerLobby = (function(){
 
 	PlayerLobby.prototype.setReady = function(isReady, time) {
 		if(time === undefined){
-			time = 1;
+			time = 0.2;
 		}
 		common.tweenTint(function(color){
 			this.icon.currentColor = color;
