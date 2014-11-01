@@ -9,6 +9,9 @@ com.speez.components.Board = (function(){
 			width: width,
 			height: height,
 			color: color,
+			colorTime: 0.2,
+			brightness: 0x22,
+			darkness: 0x11,
 			cardFormat: {
 				font: "300px Arial",
 		        fill: "#ffffff",
@@ -22,7 +25,7 @@ com.speez.components.Board = (function(){
 		        align: "center"
 			},
 			nameHeight: 200,
-			nameTime: 1,
+			nameTime: 3,
 			nameFadeInTime: 0.25,
 			nameFadeOutTime: 0.25,
 		}, options);
@@ -78,6 +81,15 @@ com.speez.components.Board = (function(){
 		var timeline = new TimelineLite();
 		timeline.to(this, this.options.appearTime, { colorProps: { backgroundColor: this.options.color }, ease: Bounce.easeOut }, 0);
     	return timeline;
+	};
+
+	Board.prototype.cancelProximity = function() {
+		return TweenLite.to(this, this.options.colorTime, { colorProps: { backgroundColor: this.options.color } }, 0)
+	};
+
+	Board.prototype.setProximity = function(isProximity) {
+		var color = common.brightness(this.options.color, isProximity ? this.options.brightness : -this.options.darkness);
+		return TweenLite.to(this, this.options.colorTime, { colorProps: { backgroundColor: color } }, 0)
 	};
 
 	Board.prototype.tweenColor = function(color, time) {

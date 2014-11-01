@@ -102,16 +102,19 @@ var stageState;
 	}
 
 	function handleSpeedy(data){
+		console.log('handleSpeedy:', data);
 		stage.game.boards = data.boards;
 		timerBall.expand(null, handleTimerBallExpandBreak);
 	}
 
 	function handleCard(data){
+		console.log('handleCard:', data);
 		boards[data.boardId].setCard(data.card, stage.players[data.playerId].name);
 		timerBall.setCard(boards[data.boardId].options.color);
 	}
 
 	function handleWinner(data){
+		console.log('handleWinner:', data);
 		stage.game.winner = data.winner;
 		timerBall.expand(handleWinnerTimerBallExpand);
 	}

@@ -50,18 +50,15 @@ function disconnect(){
 	if(this.stage){
 		returnSlot(this.stage.id);
 		this.stage.quit();
-		_.each(_.keys(this.stage.players), function(key){
-			var player = this.stage.players[key];
+		this.stage.eachPlayer(function(player){
 			player.socket.emit('speed:player:leave', {
 				code: game.Player.QUIT_STAGE_DISCONNECTED,
 				reason: 'stage disconnected'
 			});
 			var playerSocket = player;
 			delete playerSocket.player;
-		}.bind(this));
-		return;
-	}  
-	if(this.player){
+		});
+	} else if(this.player){
 		var stage = this.player.stage;
 		stage.leave(this.player);
 		stage.socket.emit('speed:stage:leave', {
@@ -72,7 +69,6 @@ function disconnect(){
 		var playerSocket = this.player.socket;
 		playerSocket.leave(stage.roomId);
 		delete playerSocket.player;
-		return;
 	}
 }
 

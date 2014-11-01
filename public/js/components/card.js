@@ -12,39 +12,43 @@ com.speez.components.Card = (function(){
 			height: height,
 			color: 0x111111,
 			pickUpColor: 0xffffff,
+		    pickUpTextColor: 0x111111,
+			pickUpAlpha: 0.75,
 			card: _.random(0,9),
+			overlappedColor: 0x777777,
+			overlappingAlpha: 0.25,
 			waitCard: '+',
 			startTime: 2,
 			spinTime: 1,
 			returnTime: 0.1,
 			colorTime: 0.1,
 			placeCardTime: 0.5,
+			winnerTime: 0.5,
+			winnerScale: 5,
 			format: {
-		        font: "200px Arial",
+		        font: "100px Arial",
 		        fill: "#eeeeee",
 		        align: "center"
 		    },
+		    textColor: 0xeeeeee,
 		    isNew: false,
 		    threshold: 0.1,
-		    dragStartCallback: this.pickUp.bind(this),
-		    dragStopCallback: this.putDown.bind(this),
-		    putDownCallback: this.placeCard.bind(this),
+		    dragStartCallback: null,
+		    dragStopCallback: null,
 
 		    shakeTime: 0.5,
 			shake: 75,
-			heightOffset: 40,
+			heightOffset: 35,
 
 		}, options);
 		// threshold colors
-		var colors = {};
-		colors[Card.THRESHOLD_LEFT_TOP] = 0xff0000;
-		colors[Card.THRESHOLD_RIGHT_TOP] = 0x00ff00;
-		colors[Card.THRESHOLD_LEFT_BOTTOM] = 0xffff00;
-		colors[Card.THRESHOLD_RIGHT_BOTTOM] = 0x0000ff;
-		options.colors = _.extend(colors, options.colors);
+		this.thresholdHit = Card.THRESHOLD_NONE;
 
 		this.options = options;
 		this.index = index;
+		this.overlap = index;
+		this.card = options.card;
+		this.faceup = false;
 
 	    Phaser.Sprite.call(this, game, options.x, options.y);
 	    game.add.existing(this);
@@ -69,16 +73,17 @@ com.speez.components.Card = (function(){
 
 	    // Adding Text
 	    this.text = new Phaser.Text(game, options.width * 0.5, options.height * 0.5, options.waitCard, options.format);
-	    this.text.scale.set(0.5, 0.5);
 	    this.text.anchor.set(0.5, 0.5);
+	    this.text.colorChange = common.textColorChange();
 	    this.container.addChild(this.text);
 
 	    // Properties
 	    this.anchor.set(0.5, 0.5);
 	    this.enable(true);
 
-	    this.entered = new signals.Signal();
-	    this.exit = new signals.Signal();
+	    this.overlapped = new signals.Signal();
+	    this.proximity = new signals.Signal();
+	    this.appeared = new signals.Signal();
 
 	    this.background.alpha = 0;
 		this.text.alpha = 0;
@@ -102,17 +107,18 @@ com.speez.components.Card = (function(){
 		this.text.fill = Phaser.Color.RGBtoString(255 - rbg.r, 255 - rbg.g, 255 - rbg.b, 255, '#');
 	}
 
-	function getThreshold(x, y){
+	function getThreshold(){
+		var x = this.x;
+		var y = this.currentRatioY;
 		var threshold = game.width * this.options.threshold;
-		var middleY = (game.height - this.options.height * this.background.scale.y)* 0.5 + this.options.heightOffset;
 		if(x > this.options.x + threshold){
-			if(y < middleY) {
+			if(y < 0.5) {
 				return Card.THRESHOLD_RIGHT_TOP;
 			} else {
 				return Card.THRESHOLD_RIGHT_BOTTOM;
 			}
 		} else if(x < this.options.x - threshold){
-			if(y < middleY) {
+			if(y < 0.5) {
 				return Card.THRESHOLD_LEFT_TOP;
 			} else {
 				return Card.THRESHOLD_LEFT_BOTTOM;
@@ -127,17 +133,37 @@ com.speez.components.Card = (function(){
 		if(this.options.waitCard !== '+' || !this.input.isDragged){
 			return;
 		}
-		var threshold = getThreshold.bind(this)(this.x, this.background.world.y);
-		if(this.thresholdHit === threshold){
+		var gameHeight = game.height - this.options.heightOffset * Layout.instance.scaleY;
+		var currentY = this.background.world.y + (this.options.height * 0.5 - this.options.heightOffset) * Layout.instance.scaleY;
+		this.currentRatioY = currentY / gameHeight;
+		var threshold = getThreshold.bind(this)();
+		if(this.thresholdHit !== threshold){
+			this.thresholdHit = threshold;
+			if(threshold === Card.THRESHOLD_NONE){
+				this.proximity.dispatch(this);
+			} else {
+				this.proximity.dispatch(this, threshold);
+				this.overlap = null;
+				if(this.overlap !== this.index){
+					this.overlapped.dispatch(this);
+				}
+			}
+		}
+		if(this.thresholdHit !== Card.THRESHOLD_NONE){
 			return;
 		}
-		this.thresholdHit = threshold;
-		if(threshold === Card.THRESHOLD_NONE){
-			this.entered.dispatch(threshold);
-			this.cancelProximity();
+		var overlap = Math.floor(this.currentRatioY * 5);
+		if(overlap === this.index || overlap < 0 || overlap > 4){
+			overlap = null;
+		}
+		if(this.overlap === overlap){
+			return;
+		}
+		this.overlap = overlap;
+		if(overlap === null) {
+			this.overlapped.dispatch(this);
 		} else {
-			this.exit.dispatch(threshold);
-			this.setProximity(this.options.colors[threshold]);
+			this.overlapped.dispatch(this, overlap);
 		}
 	}
 
@@ -146,8 +172,13 @@ com.speez.components.Card = (function(){
 			return;
 		}
 		this.input.enableDrag(false, true);
-	    this.events.onDragStart.add(this.options.dragStartCallback);
-	    this.events.onDragStop.add(this.options.dragStopCallback);
+	    this.events.onDragStart.add(this.pickUp.bind(this));
+	    if(this.options.dragStartCallback){
+	    	this.events.onDragStart.add(this.options.dragStartCallback);
+	    }
+	    if(this.options.dragStopCallback){
+	    	this.events.onDragStop.add(this.options.dragStopCallback);
+	    }
 	};
 
 	Card.prototype.makeShowCardClick = function() {
@@ -166,45 +197,98 @@ com.speez.components.Card = (function(){
 		return timeline;
 	}
 
-	Card.prototype.appearCard = function() {
+	Card.prototype.appearCard = function(isOverlap) {
 		var timeline = new TimelineLite();
 		timeline.to(this.text, this.options.spinTime, { angle: 360, ease: Back.easeInOut });
 		timeline.addLabel('spinHalf', this.options.spinTime / 2);
 		timeline.to(this.background, this.options.spinTime / 2, { alpha: 1 }, 'spinHalf');
 		timeline.add(function(){
-			this.text.text = this.options.card;
+			this.text.text = this.card;
 		}.bind(this), 'spinHalf');
 		timeline.add(this.makeDraggable.bind(this));
+		timeline.add(function(){
+			this.faceup = true;
+			this.appeared.dispatch(this);
+		}.bind(this));
 		return timeline;
 	};
 
+	Card.prototype.overlapCard = function(newCard) {
+		this.card = newCard;
+		this.text.angle = 0;
+		this.enable(false);
+		var timeline = new TimelineLite();
+		timeline.to(this.text, this.options.spinTime, { angle: 360, ease: Back.easeInOut });
+		timeline.addLabel('spinHalf', this.options.spinTime / 2);
+		timeline.add(this.background.tweenColor(this.options.color, this.options.spinTime / 2), 'spinHalf');
+		timeline.add(function(){
+			this.text.text = this.card;
+		}.bind(this), 'spinHalf');
+		timeline.add(function(){
+			this.enable(true);
+			//this.overlapAppeared.dispatch(this);
+		}.bind(this));
+		timeline.to(this.text.scale, this.options.spinTime, { x: 1, y: 1 }, 0);
+		return timeline;
+	}
+
+
 	Card.prototype.cancelProximity = function() {
-		this.background.tweenColor(this.options.pickUpColor, this.options.colorTime);
+		return this.background.tweenColor(this.options.pickUpColor, this.options.colorTime);
 	}
 
 	Card.prototype.setProximity = function(color) {
-		this.background.tweenColor(color, this.options.colorTime);
+		return this.background.tweenColor(color, this.options.colorTime);
+	};
+
+	Card.prototype.cancelOverlapped = function() {
+		var timeline = new TimelineLite();
+		timeline.to(this.text.scale, this.options.colorTime, { x: 1, y: 1 });
+		timeline.add(this.background.tweenColor(this.options.color, this.options.colorTime), 0);
+		return timeline;
+	};
+
+	Card.prototype.setOverlapped = function() {
+		var timeline = new TimelineLite();
+		timeline.to(this.text.scale, this.options.colorTime, { x: 2, y: 2 });
+		timeline.add(this.background.tweenColor(this.options.overlappedColor, this.options.colorTime), 0);
+		return timeline;
+	};
+
+	Card.prototype.cancelOverlapping = function() {
+		return TweenLite.to(this, this.options.colorTime, { alpha: this.options.pickUpAlpha });
+	}
+
+	Card.prototype.setOverlapping = function() {
+		return TweenLite.to(this, this.options.colorTime, { alpha: this.options.overlappingAlpha });
+	}
+
+	Card.prototype.setOverlapSighted = function() {
+		var timeline = new TimelineLite();
+		timeline.add(this.setOverlapped());
+		timeline.add(this.cancelOverlapped());
+		return timeline;
 	};
 
 	Card.prototype.pickUp = function() {
-		this.background.tweenColor(this.options.pickUpColor, this.options.colorTime);
-	}
-
-	Card.prototype.putDown = function() {
-		if(this.thresholdHit === Card.THRESHOLD_NONE){
-			this.returnCard();
-			return;
-		}
-		this.options.putDownCallback(this, this.thresholdHit);
+		this.destroyTweens();
+		var timeline = new TimelineLite();
+		timeline.add(this.background.tweenColor(this.options.pickUpColor, this.options.colorTime));
+		timeline.to(this, this.options.colorTime, { alpha: this.options.pickUpAlpha }, 0);
+		timeline.to(this.text, this.options.colorTime, { colorProps: { colorChange: this.options.pickUpTextColor } });
+		return timeline;
 	}
 
 	Card.prototype.returnCard = function() {
-		this.background.tweenColor(this.options.color, this.options.colorTime);
+		this.destroyTweens();
 		var timeline = new TimelineLite({ onComplete: function(){ this.enable(true); }.bind(this) });
-		timeline.to(this, this.options.returnTime, { x: this.options.x, y: this.options.y });
+		timeline.add(this.background.tweenColor(this.options.color, this.options.colorTime));
+		timeline.to(this, this.options.returnTime, { x: this.options.x, y: this.options.y, alpha: 1 }, 0);
+		timeline.to(this.text, this.options.returnTime, { colorProps: { colorChange: this.options.textColor } }, 0);
+		return timeline;
 	}
 
-	Card.prototype.placeCard = function() {
+	Card.prototype.placeCardBoard = function() {
 		var x;
 		this.enable(false);
 		if(this.thresholdHit === Card.THRESHOLD_LEFT_BOTTOM || this.thresholdHit === Card.THRESHOLD_LEFT_TOP){
@@ -215,16 +299,31 @@ com.speez.components.Card = (function(){
 		var timeline = new TimelineLite();
 		timeline.to(this, this.options.placeCardTime, { x: x, alpha: 0 });
 		// timeline.to(this.background.scale, this.options.placeCardTime, { x: 0, y: 0 }, 0);
-		this.placeCardTimeline = timeline;
+		return timeline;
 	};
 
+	Card.prototype.placeCardOverlap = function() {
+		var index = this.overlap - this.index;
+		var y = index * this.options.height * Layout.instance.scaleY;
+		var timeline = new TimelineLite();
+		timeline.to(this, this.options.placeCardTime, { x: this.options.x, y: y, alpha: 0 });
+		return timeline;
+	}
+
 	Card.prototype.reject = function() {
-		if(this.placeCardTimeline && this.placeCardTimeline.isActive()){
-			this.placeCardTimeline.kill();
-		}
+		this.destroyTweens();
 		this.alpha = 1;
 		this.x = this.options.x;
 		this.y = this.options.y;
+		this.text.fill = '#' + this.options.textColor.toString(16);
+		this.text.scale.set(1,1);
+		this.background.setColor(this.options.color);
+	};
+
+	Card.prototype.destroyTweens = function() {
+		TweenLite.killTweensOf(this);
+		TweenLite.killTweensOf(this.text);
+		TweenLite.killTweensOf(this.background);
 	};
 
 	Card.prototype.shake = function(isLeft, color) {
@@ -240,6 +339,16 @@ com.speez.components.Card = (function(){
 		timeline.add(this.background.tweenColor(color, completeTime / 4), 0);
 		timeline.add(this.background.tweenColor(this.options.color, completeTime / 4), completeTime / 4);
 		timeline.timeScale(1.5);
+		return timeline;
+	};
+
+	Card.prototype.playWinner = function() {
+		var timeline = new TimelineLite();
+		timeline.to(this.text.scale, this.options.winnerTime / 4, { x: this.options.winnerScale, y: this.options.winnerScale }, 0);
+		timeline.to(this.text, this.options.winnerTime / 4, { colorProps: { colorChange: _.random(0x555555, 0xeeeeee) } }, 0);
+		timeline.addLabel('break', this.options.winnerTime / 4);
+		timeline.to(this.text.scale, this.options.winnerTime * 3 / 4, { x: 1, y: 1, ease: Elastic.easeOut }, 'break');
+		timeline.to(this.text, this.options.winnerTime * 3 / 4, { colorProps: { colorChange: this.options.textColor } }, 'break');
 		return timeline;
 	};
 

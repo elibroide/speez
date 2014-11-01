@@ -96,14 +96,15 @@ var common = {
 		if(time === undefined){
 			time = 0.5;
 		}
-		return TweenLite.to(common, time, { colorProps: { stageColor: color }, onComplete: complete });
-	},
-
-	stageColor: function(color){
-		if(color !== undefined){
-			game.stage.backgroundColor = common.getRgb(color);
+		var stageChanger = {
+			stageColor: function(color){
+				if(color !== undefined){
+					game.stage.backgroundColor = common.getRgb(color);
+				}
+				return game.stage.backgroundColor;
+			}
 		}
-		return game.stage.backgroundColor;
+		return TweenLite.to(stageChanger, time, { colorProps: { stageColor: color }, onComplete: complete });
 	},
 
 	tweenSpin: function(obj, time, options){
@@ -142,8 +143,43 @@ var common = {
 	rgba: function(r, g, b, a){
 		console.log(r, g, b, a);
 		return (a << 24) + (r << 16) + (g << 8) + (b);
-	}
+	},
+
+	textColorChange: function(){
+		return function(color){
+			if(color !== undefined){
+				this.fill = '#' + common.getRgb(color).toString(16);
+			}
+			return this.fill;
+		}
+	},
+
+	propertyColorChange: function(property) {
+		return function(color){
+			if(color !== undefined){
+				this[property] = common.getRgb(color);
+			}
+			return this[property];
+		}
+	},
+
+	brightness: function(color, diff) {
+		var rgb = Phaser.Color.getRGB(color);
+		rgb.r = Math.max(0, Math.min(255, rgb.r + diff));
+		rgb.g = Math.max(0, Math.min(255, rgb.g + diff));
+		rgb.b = Math.max(0, Math.min(255, rgb.b + diff));
+		return common.rgb(rgb.r, rgb.g, rgb.b);
+	},
 }
+
+
+
+
+
+
+
+
+
 
 
 

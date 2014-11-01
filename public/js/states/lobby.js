@@ -65,25 +65,9 @@ var lobbyState = (function(){
 
 		container.alpha = 0;
 		header.alpha = 0;
-		game.add.tween(container).to({alpha: 1}, 1000, null, true);
-		game.add.tween(header).to({alpha: 1}, 1000, null, true);
 
-		try{
-			var graphics = new Phaser.Graphics(game);
-			// graphics.beginFill(0xff000000);
-			graphics.drawRect(0, 0, 100, 100);
-			var spr = game.add.sprite(0, 0, graphics.generateTexture());
-			graphics.beginFill(0x000000);
-			spr.addChild(graphics);
-			spr.anchor.set(0.5);
-			setTimeout(function(){
-				game.add.tween(spr.scale)
-					.to({ x: 2, y: 2 }, 1000, Phaser.Easing.Elastic.Out, true)
-					.to({ x: 10, y: 10 }, 500, Phaser.Easing.Sinusoidal.InOut, true);
-			}.bind(this), 1000)
-			lobbyGroup.add(spr);
-		}
-		catch(err){console.log(err);}
+		var timeline = new TimelineLite();
+		timeline.to([container, header], 1, { alpha: 1 });
 	}
 
 	// Various
@@ -175,6 +159,10 @@ var lobbyState = (function(){
 		game.state.start('stage');
 	}
 
+	function handleName(data){
+		stage.players[data.playerId].icon.changeName(data.name);
+	}
+
 	return {
 
 		preload: function(){
@@ -194,6 +182,7 @@ var lobbyState = (function(){
 			socket.on('speed:stage:leave', handleLeave);
 			socket.on('speed:stage:ready', handleReady);
 			socket.on('speed:stage:load', handleLoad);
+			socket.on('speed:stage:name', handleName);
 			
 			if(stage){
 				socket.emit('speed:stage:nextLobby', null, handleNextLobby);
@@ -215,6 +204,7 @@ var lobbyState = (function(){
 			socket.off('speed:stage:leave', handleLeave);
 			socket.off('speed:stage:ready', handleReady);
 			socket.off('speed:stage:load', handleLoad);
+			socket.off('speed:stage:name', handleName);
 		},
 
 	}

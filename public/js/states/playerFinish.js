@@ -45,7 +45,7 @@ var playerFinishState = (function(){
 		nextGameContainer.addChild(textNextGame);
 
 		player.isReady = false;
-		btnReady = new MenuButton(0, 50, 300, 60, 'Not Ready', handleReadyClicked, { anchorX: 0.5, anchorY: 0.5 })
+		btnReady = new MenuButton(0, 50, 300, 60, 'Ready', handleReadyClicked, { anchorX: 0.5, anchorY: 0.5 })
 		nextGameContainer.addChild(btnReady);
 	}
 
@@ -53,7 +53,7 @@ var playerFinishState = (function(){
 
 	function handleReadyClicked(){
 		player.isReady = !player.isReady;
-		btnReady.setText(player.isReady ? 'Ready' : 'Not Ready');
+		btnReady.setText(player.isReady ? 'Not Ready' : 'Ready');
 		socket.emit('speed:player:ready', { isReady: player.isReady });
 	}
 
@@ -71,7 +71,6 @@ var playerFinishState = (function(){
 
 	function handleLoad(data){
 		player.game = data;
-		player.game.cardCount = data.library.length;
 
 		var timeline = new TimelineLite();
 		timeline.add(common.tweenStageColor(0xffffff, function(){

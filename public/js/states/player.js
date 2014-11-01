@@ -22,8 +22,10 @@ var playerState = (function(){
 	var boardWidthRight;
 	var cardHeight;
 
+	var overlapCard;
 	var heldCard;
 	var heldCardBoardId;
+	var heldCardOverlapId;
 
 	function drawGui(){
 		// sizes
@@ -66,7 +68,7 @@ var playerState = (function(){
 
 		hand = [];
 		for(var i = 0; i < 5; i++){
-			var card = drawCard(i, true);
+			var card = drawCard(player.game.hand[i], i, true);
 		}
 
 		// animation start
@@ -74,6 +76,9 @@ var playerState = (function(){
 		timeline.add(_.invoke(boards, 'appear', 0x333333), 0, null, 0);
 		timeline.add(_.invoke(hand, 'startCard'), 0, null, 0);
 		timeline.add(_.invoke(hand, 'appearCard'), null, null, 0.2);
+		if(config.isTest){
+			timeline.timeScale(9);
+		}
 
 		// Content
 		playerArea = new com.LayoutArea(0, 0, originalWidth, originalHeight, { isDebug: false });
@@ -102,39 +107,110 @@ var playerState = (function(){
 		socket.emit('speed:player:loaded');
 	}
 
-	function handleCardPutDown(card, thresholdId){
+	function handleCardPickedUp(card){
+		_.each(hand, function(cardInHand){
+			if(!cardInHand || cardInHand === card || !cardInHand.faceup){
+				return;
+			}
+			if(compareCards(cardInHand.card, card.card)){
+				// card.setOverlapSighted();
+				cardInHand.setOverlapSighted();
+			}
+		});
+	}
+
+	function handleCardPutDown(card){
+		overlapCard = null;
+		if(card.thresholdHit !== Card.THRESHOLD_NONE){
+			holdCard(card);
+			placeCardBoard(card, card.thresholdHit)
+		} else if(card.overlap !== null && hand[card.overlap] && compareCards(card.card, hand[card.overlap].card) && hand[card.overlap].faceup){
+			holdCard(card);
+			placeCardOverlap(card, card.overlap);
+		} else {
+			card.returnCard();
+		}
+	}
+
+	function holdCard(card){
 		heldCard = card;
-		card.placeCard();
 		_.invoke(hand, 'enable', false);
+	}
+
+	function placeCardBoard(card, thresholdId){
+		card.placeCardBoard();
 		heldCardBoardId = getBoard(thresholdId);
 		if(config.isTest){
-			testCardPut(card, heldCardBoardId);
+			testCardPutBoard({ boardId: heldCardBoardId, handId: card.index });
 			return;
 		}
-		socket.emit('speed:player:card', { boardId: heldCardBoardId, handId: card.index }, handleCard);
+		socket.emit('speed:player:cardBoard', { boardId: heldCardBoardId, handId: card.index }, handleCardBoard);
+	}
+
+	function placeCardOverlap(card, overlap){
+		card.placeCardOverlap();
+		if(config.isTest){
+			testCardPutOverlap(card, overlap);
+			return;
+		}
+		socket.emit('speed:player:cardOverlap', { overlapId: overlap, handId: card.index }, handleCardOverlap);
+	}
+
+	function handleCardOverlapped(card, overlap){
+		if(overlapCard){
+			_.invoke(boards, 'cancelProximity')
+			overlapCard.cancelOverlapped();
+			card.cancelOverlapping();
+		}
+		overlapCard = null;
+		if(overlap === undefined){
+			return;
+		}
+		var targetCard = hand[overlap];
+		if(!targetCard || !targetCard.faceup || !compareCards(targetCard.card, card.card)){
+			return;
+		}
+		overlapCard = targetCard;
+		overlapCard.setOverlapped();
+		card.setOverlapping();
+		_.invoke(boards, 'setProximity', false)
+	}
+
+	function handleCardProximity(card, threshold){
+		if(threshold === undefined){
+			_.invoke(boards, 'cancelProximity');
+			card.cancelProximity();
+		} else {
+			_.invoke(boards, 'setProximity', false);
+			var board = boards[getBoard(threshold)];
+			board.setProximity(true);
+			card.setProximity(board.options.color);
+		}
 	}
 
 	// handling socket
 
 	function handleStart(data){
-		library = player.game.library;
-		
+		console.log('handleStart:', data);
 		drawGui();
 	}
 
 	function handleWinner(data){
+		console.log('handleWinner:', data);
 		var timeline = new TimelineLite();
 		var dissipateTime = 1;
 		player.game.winner = data.winner;
 		if(data.winner){
 			// play winner animation
 			_.invoke(hand, 'unattach');
-			var distance = 150;
+			_.invoke(hand, 'reject');
+			var distance = 100;
 			var speezTime = 1;
-			timeline.to(hand[0], speezTime, { x: 150 - distance * 2, y: hand[2].y }, 0);
-			timeline.to(hand[1], speezTime, { x: 150 - distance, y: hand[2].y }, 0);
-			timeline.to(hand[3], speezTime, { x: 150 + distance, y: hand[2].y }, 0);
-			timeline.to(hand[4], speezTime, { x: 150 + distance * 2, y: hand[2].y }, 0);
+			var getHeight = hand[0].options.height * Layout.instance.scaleY;
+			timeline.to(hand[0], speezTime, { x: 150 - distance * 2, y: '+=' + getHeight * 2, ease: Back.easeOut }, 0);
+			timeline.to(hand[1], speezTime, { x: 150 - distance, y: '+=' + getHeight * 1, ease: Back.easeOut  }, 0);
+			timeline.to(hand[3], speezTime, { x: 150 + distance, y: '-=' + getHeight * 1, ease: Back.easeOut  }, 0);
+			timeline.to(hand[4], speezTime, { x: 150 + distance * 2, y: '-=' + getHeight * 2, ease: Back.easeOut  }, 0);
 			timeline.to(boards, speezTime, { alpha: 0 }, 0);
 			var texts = _.pluck(hand, 'text');
 			timeline.to(_.pluck(texts, 'scale'), speezTime, { x: 1, y: 1 }, 0);
@@ -159,8 +235,29 @@ var playerState = (function(){
 		}, 'dissipate');
 	}
 
-	function handleCard(data){
+	function handleCardOverlap(data) {
+		console.log('handleCardOverlap:', data);
 		_.invoke(hand, 'enable', true);
+		_.invoke(boards, 'cancelProximity');
+		if(!data.confirm){
+			_.invoke(hand, 'reject')
+			return;
+		}
+		hand[data.handId].enable(false);
+		hand[data.overlapId].reject();
+
+		var newCard = drawCard(data.newCard, data.handId, false, false);
+		newCard.startCard();
+		// var timeline = new TimelineLite();
+		// timeline.add(newCard.startCard());
+		// timeline.add(newCard.appearCard());
+		// timeline.timeScale(2);
+	}
+
+	function handleCardBoard(data){
+		console.log('handleCardBoard:', data);
+		_.invoke(hand, 'enable', true);
+		_.invoke(boards, 'cancelProximity');
 		if(!data.confirm){
 			// reject
 			_.invoke(hand, 'reject')
@@ -172,11 +269,10 @@ var playerState = (function(){
 			return;
 		}
 		player.game.cardCount--;
-		var isEmpty = library.length === 0;
-		var newCard = drawCard(heldCard.index, false);
+		var isEmpty = player.game.cardCount < 5;
+		var newCard = drawCard(data.newCard, data.handId, false, isEmpty);
 		newCard.startCard();
 		if(isEmpty){
-			lastCards--;
 			newCard.enable(false);
 		}
 		header.setText(getHeaderText());
@@ -184,17 +280,29 @@ var playerState = (function(){
 
 	// other
 
-	function drawCard(index, isNew){
+	function setNewCard(card, index, isEmpty) {
+		
+	}
+
+	function compareCards(card1, card2){
+		return card1 === card2;
+	}
+
+	function drawCard(card, index, isNew, isEmpty){
 		var card = new com.speez.components.Card(index, 
 			boardWidth, headerHeight + cardHeight * index, 
 			boardWidthRight - boardWidth, cardHeight, {
 				colors: colors,
-				waitCard: library.length === 0 ? 'speez'[index] : '+',
+				waitCard: isEmpty ? 'speez'[index] : '+',
 				isNew: isNew,
-				card: library.pop(),
-				putDownCallback: handleCardPutDown,
+				card: card,
+				dragStartCallback: handleCardPickedUp,
+				dragStopCallback: handleCardPutDown,
+				heightOffset: headerHeight,
 			}
 		);
+		card.overlapped.add(handleCardOverlapped);
+		card.proximity.add(handleCardProximity);
 		if(!isNew){
 			card.options.startTime = 0.5;
 			card.options.spinTime = 0.5;
@@ -226,18 +334,40 @@ var playerState = (function(){
 		handleStart();
 	}
 
-	function testCardPut(card, boardId){
-		if(boardId === 0 || boardId === 2){
-			// reject
-			handleCard({ confirm: true });
-			if(lastCards === 0){
-				setTimeout(function(){
-					handleWinner({winner: false});
+	function testCardPutOverlap(card, overlapId){
+		handleCardOverlap({ confirm: true, newCard: _.random(0, 9), handId: card.index, overlapId: overlapId, newOverlapCard: card.card });
+	}
+
+	function testCardPutBoard(data){
+		var boardId = data.boardId;
+		if(boardId % 2 === 0){
+			var newCard = _.random(0, 9);
+			if(boardId === 0){
+				handleCardBoard({ confirm: true, handId: data.handId, newCard: newCard });
+				if(player.game.cardCount === 0){
+					setTimeout(function(){
+						handleWinner({winner: true});
+					}, 1000);
+				}
+			} else {
+				setTimeout(function(){ 
+					handleCardBoard({ confirm: true, handId: data.handId, newCard: newCard });
+					if(player.game.cardCount === 0){
+						setTimeout(function(){
+							handleWinner({winner: false});
+						}, 1000);
+					}
 				}, 1000);
 			}
 			return;
 		}
-		handleCard({ confirm: false });
+		if(boardId === 3){
+			setTimeout(function(){
+				handleCardBoard({ confirm: false });
+			}, 1000);
+		} else {
+			handleCardBoard({ confirm: false });
+		}
 	}
 
 	return {

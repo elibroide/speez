@@ -14,6 +14,7 @@ var mainState = (function(){
 	var btnTestPlayer;
 	var btnTestStage;
 	var btnReady;
+	var btnChangeName;
 
 	// header
 	var header;
@@ -41,10 +42,10 @@ var mainState = (function(){
 		btnTestPlayer = new MenuButton(0, 100, 300, 60, 'Test Player', handleTestingPlayerClicked, { anchorX: 0.5, anchorY: 0.5 });
 		btnTestStage = new MenuButton(0, 200, 300, 60, 'Test Stage', handleTestingStageClicked, { anchorX: 0.5, anchorY: 0.5 });
 
-		btnReady = new MenuButton(0, 0, 300, 60, 'Not Ready', handleReadyClicked, { anchorX: 0.5, anchorY: 0.5 })
-		btnReady.kill();
+		btnChangeName = new MenuButton(0, -100, 300, 60, 'Change Name', handleChangeName, { anchorX: 0.5, anchorY: 0.5 })
+		btnReady = new MenuButton(0, 0, 300, 60, 'Ready', handleReadyClicked, { anchorX: 0.5, anchorY: 0.5 })
 		btnLeave = new MenuButton(0, 100, 300, 60, 'Leave', null, { anchorX: 0.5, anchorY: 0.5 })
-		btnLeave.kill();
+		toggleLobby(false);
 
 		// Group buttons
 		buttons = game.add.group();
@@ -52,6 +53,7 @@ var mainState = (function(){
 		buttons.add(btnBecomeStage);
 		buttons.add(btnTestPlayer);
 		buttons.add(btnTestStage);
+		buttons.add(btnChangeName);
 		buttons.add(btnReady);
 		buttons.add(btnLeave);
 
@@ -74,9 +76,11 @@ var mainState = (function(){
 
 	function toggleLobby(on) {
 		if(on){
+			btnChangeName.revive();
 			btnReady.revive();
 			btnLeave.revive();
 		} else {
+			btnChangeName.kill();
 			btnReady.kill();
 			btnLeave.kill();
 		}
@@ -100,20 +104,21 @@ var mainState = (function(){
 			name: 'Cow',
 			game: {
 				boardCount: 2,
-				library: [],
 				hand: [],
 				boards: [
 					{ color: colors[0] },
 					{ color: colors[1] },
-					{ color: colors[2] },
-					{ color: colors[3] },
+					// { color: colors[2] },
+					// { color: colors[3] },
 				],
 				cardCount: 5,
 			}
 		}
-		for(var i = 0; i < player.game.cardCount; i++){
-			player.game.library.push(_.random(0,9));
-		}
+		player.game.hand.push(1);
+		player.game.hand.push(_.random(0,9));
+		player.game.hand.push(1);
+		player.game.hand.push(1);
+		player.game.hand.push(_.random(0,9));
 		// set test
 		textStatus.setText('Testing player');
 		config.isTest = true;
@@ -156,16 +161,15 @@ var mainState = (function(){
 	function handleReadyClicked(){		
 		isReady = !isReady;
 		socket.emit('speed:player:ready', { isReady: isReady });
-		if(isReady){
-			btnReady.setText('Ready');
-		}
-		else{
-			btnReady.setText('Not Ready');
-		}
+		btnReady.setText(isReady ? 'Not Ready' : 'Ready');
+	}
+
+	function handleChangeName(){
+		socket.emit('speed:player:name', { name: '' }, handleName);
 	}
 
 	function handleLeaveClicked(){
-		socket.emit('speed.player.leave');
+		socket.emit('speed:player:leave', handleLeave);
 		toggleLobby(false);
 	}
 
@@ -196,13 +200,15 @@ var mainState = (function(){
 	}
 
 	function handleLoad(data){
-		console.log("YOYOYO MAIN IS IN THE HOUSE");
 		player.game = data;
-		player.game.cardCount = data.library.length;
 		toggleLobby(false);
 		common.tweenStageColor(0xffffff, function(){
 			setTimeout(function(){ game.state.start('player'); }, 500);
 		});
+	}
+
+	function handleName(data){
+		textStatus.setText(data.name);
 	}
 
 	// debug 
@@ -245,7 +251,6 @@ var mainState = (function(){
 			// Draw things
 			drawGui();
 
-			socket.on('speed:player:leave', handleLeave);
 			socket.on('speed:player:load', handleLoad);
 
 			debugLatency();
@@ -257,13 +262,12 @@ var mainState = (function(){
 		},
 
 		render: function(){
-			game.debug.cameraInfo(game.camera, 32, 32);
+			// game.debug.cameraInfo(game.camera, 32, 32);
             // game.debug.inputInfo(32, 130);
 
 		},
 
 		shutdown: function(){
-			socket.off('speed:player:leave', handleLeave);
 			socket.off('speed:player:load', handleLoad);
 		},
 

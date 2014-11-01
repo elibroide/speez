@@ -17,12 +17,14 @@ com.speez.components.TimerBall = (function(){
 		// animation options
 		options.card = _.extend({
 			time: 0.25,
-			delayTime: 0.5,
+			delayTime: 0.3,
+			complete: this.beginCounting.bind(this),
 		}, options.card);
 		options.counting = _.extend({
-			time: 5,
+			time: 4,
 			complete: this.expand.bind(this),
-			scale: 0.2,
+			scale: 0,
+			delayTime: 0,
 		}, options.counting);
 		options.expand = _.extend({
 			time: 1,
@@ -32,12 +34,13 @@ com.speez.components.TimerBall = (function(){
 			breakTime: 1,
 			breakTimeOut: 0.1,
 			colorTime: 0.5,
+			delayTime: 0,
 			complete: this.deflate.bind(this),
 		}, options.expand),
 		options.deflate = _.extend({
 			time: 1,
 			scale: 1,
-			pauseTime: 1,
+			delayTime: 0.3,
 			complete: this.beginCounting.bind(this),				
 		}, options),
 		this.options = options;
@@ -60,22 +63,88 @@ com.speez.components.TimerBall = (function(){
 
 	// private methods
 
+	function setDeflate(){
+		var options = this.options.deflate;
+		var timeline = new TimelineLite({ });
+		timeline.addLabel('deflate', '+=0.1');
+		timeline.to(this.scale, options.time, 
+			{ x: options.scale, y: options.scale, ease: Back.easeOut }, 'deflate');
+		timeline.add(function(){
+			if(options.complete){
+				options.complete();
+			}
+		}, '+=' + options.delayTime);
+		timeline.addLabel('deflateEnded');
+		// timeline.add(function(){ console.log('deflate ended') }, 'deflateEnded');
+		// timeline.add(function(){ console.log('deflate started') }, 'deflate');
+		return timeline;
+	}
+
+	function setCounting(){
+		var options = this.options.counting;
+		var timeline = new TimelineLite({ });
+		timeline.addLabel('counting');
+		timeline.to(this.scale, options.time, { x: options.scale, y: options.scale, ease: Sine.easeIn }, 'counting');
+		timeline.add(function(){
+			if(options.complete){
+				options.complete();
+			}
+		}, '+=' + options.delayTime);
+		timeline.addLabel('countingEnded');
+		// timeline.add(function(){ console.log('counting started') }, 'counting');
+		// timeline.add(function(){ console.log('counting ended') }, 'countingEnded');
+		return timeline;
+	}
+
+	function setExpand(){
+		var options = this.options.expand;
+		var timeline = new TimelineLite({ });
+		timeline.addLabel('expand');
+		timeline.to(this, options.colorTime, { colorProps: { backgroundColor: this.options.color } }, 'expand');
+		timeline.to(this.scale, options.breakTime, { x: options.breakScale, y: options.breakScale, ease: Elastic.easeOut }, 'expand');
+		timeline.addLabel('expandBreak', '-=' + options.breakTimeOut);
+		timeline.add(function(){
+			if(options.breakCallback){
+				options.breakCallback();
+			}
+		}, 'expandBreak');
+		timeline.to(this.scale, options.time, { x: options.scale, y: options.scale }, 'expandBreak');
+		timeline.add(function(){
+			if(options.complete){
+				options.complete();
+			}
+		}, '+=' + options.delayTime);
+		timeline.addLabel('expandEnded');
+
+		// timeline.add(function(){ console.log('expand started') }, 'expand');
+		// timeline.add(function(){ console.log('expand ended') }, 'expandEnded');
+		return timeline;
+	}
+
+	function setCard(color){
+		var options = this.options.card;
+		var timeline = new TimelineLite({ });
+		timeline.addLabel('card');
+		timeline.fromTo(this.scale, options.time, {x: 0.5, y: 0.5}, { x: 1, y: 1, ease: Elastic.easeOut }, 'card');
+		timeline.to(this, options.time / 2, { colorProps: { backgroundColor: color } }, 'card');
+		timeline.to(this, options.time / 2, { colorProps: { backgroundColor: this.options.color } }, 'card');
+		timeline.add(function(){
+			if(options.complete){
+				options.complete();
+			}
+		}, '+=' + options.delayTime);
+		timeline.addLabel('cardEnded');
+
+		// timeline.add(function(){ console.log('card started') }, 'card');
+		// timeline.add(function(){ console.log('card ended') }, 'cardEnded');
+		return timeline;
+	}
+
 	// public methods
 
-	TimerBall.prototype.setCard = function(color, isStay) {
+	TimerBall.prototype.setCard = function(color) {
 		var options = this.options.card;
-		var timeline = new TimelineLite();
-		timeline.to(this.scale, options.time, { x: 1, y: 1, ease: Elastic.easeOut }, 0);
-		timeline.to(this, options.time, { colorProps: { backgroundColor: color } }, 0);
-		if(!isStay){
-			timeline.addLabel('half', '+=' + options.time);
-			timeline.to(this, options.time, { colorProps: { backgroundColor: this.options.color } }, 'half');
-			timeline.add(this.beginCounting.bind(this), '+=' + options.delayTime);
-		}
-		if(this.colorTimeline && this.colorTimeline.isActive()){
-			this.colorTimeline.kill();
-		}
-		this.colorTimeline = timeline;
+		return this.playTimeline(setCard.call(this, color));
 	}
 
 	TimerBall.prototype.backgroundColor = function(color) {
@@ -86,32 +155,28 @@ com.speez.components.TimerBall = (function(){
 	};
 
 	TimerBall.prototype.beginCounting = function() {
-		var options = this.options.counting;
-		var timeline = new TimelineLite({ onComplete: options.complete });
-		timeline.to(this.scale, options.time, { x: options.scale, y: options.scale });
+		return this.playTimeline(setCounting.call(this));
 	}
 
 	TimerBall.prototype.expand = function(callback, breakCallback) {
-		var options = this.options.expand;
-		var timeline = new TimelineLite({ onComplete: callback });
-		timeline.to(this, options.colorTime, { colorProps: { backgroundColor: this.options.color } }, 0);
-		if(options.isBreak){
-			timeline.to(this.scale, options.breakTime, {x: options.breakScale, y: options.breakScale, ease: Elastic.easeOut }, 0);
-			timeline.addLabel('break', '-=' + options.breakTimeOut);
-			if(breakCallback){
-				timeline.add(breakCallback, 'break');
-			}
-		} else {
-			timeline.addLabel('break', 0);
-		}
-		timeline.to(this.scale, options.time, { x: options.scale, y: options.scale }, 'break');
+		this.options.expand.complete = callback;
+		this.options.expand.breakCallback = breakCallback;
+		return this.playTimeline(setExpand.call(this));
 	};
 
 	TimerBall.prototype.deflate = function() {
-		var options = this.options.deflate;
-		var timeline = new TimelineLite();
-		timeline.to(this.scale, options.time, { x: options.scale, y: options.scale, ease: Back.easeOut }, 0);
-		timeline.add(options.complete, '+=' + options.pauseTime);
+		return this.playTimeline(setDeflate.call(this));
+	}
+
+	TimerBall.prototype.playTimeline = function(timeline) {
+		if(this.currentTimeline){
+			this.currentTimeline.kill();
+		}
+		if(!timeline){
+			return;
+		}
+		this.currentTimeline = timeline;
+		return timeline;
 	}
 
 	return TimerBall;

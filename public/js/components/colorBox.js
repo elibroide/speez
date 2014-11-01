@@ -53,6 +53,12 @@ com.speez.components.ColorBox = (function(){
 		this.text.text = text;
 	}
 
+	ColorBox.prototype.setColor = function(color) {
+		var rgb = Phaser.Color.getRGB(color);
+		var text = [ 'rgb(', rgb.r, ',', rgb.g, ',', rgb.b, ')' ].join('');
+		this.backgroundColor(text);
+	}
+
 	ColorBox.prototype.backgroundColor = function(color) {
 		if(color !== undefined){
 			this.color = common.getRgb(color);

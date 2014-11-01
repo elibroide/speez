@@ -22,11 +22,12 @@ Object.defineProperty(Stage, "STATE_PLAY", { value: 'play' });
 Object.defineProperty(Stage, "STATE_SPEEDY", { value: 'speedy' });
 
 Object.defineProperty(Stage, "LEAVE_DISCONNECT", { value: 300 });
+Object.defineProperty(Stage, "LEAVE_USER_CHOICE", { value: 301 });
 
 // public methods
 
 Stage.prototype.join = function(player) {
-	var name = this.names.splice(0, 1)[0];
+	var name = this.getName();
 	this.players[player.id] = player;
 	return {
 		confirm: true,
@@ -35,17 +36,24 @@ Stage.prototype.join = function(player) {
 	};
 };
 
+Stage.prototype.getName = function(previousName) {
+	if(previousName){
+		this.names.push(previousName);
+	}
+	var name = this.names.splice(0, 1)[0];
+	this.names = _.shuffle(this.names);
+	return name;
+};
+
 Stage.prototype.leave = function(player) {
 	delete this.players[player.id];
 };
 
 Stage.prototype.setReady = function(player, isReady) {
 	player.isReady = isReady;
-	var keys = _.keys(this.players);
-	console.log('here');
-	if(keys.length > 0 && _.every(keys, function(key){
-		return this.players[key].isReady;
-	}.bind(this))) {
+	if(this.everyPlayer(function(player){
+		return player.isReady;
+	})) {
 		this.restoreReady();
 		return true;
 	}
@@ -85,10 +93,9 @@ Stage.prototype.setLoaded = function(player) {
 	} else {
 		this.players[player.id].isLoaded = true;
 	}
-	var keys = _.keys(this.players);
-	if(this.isLoaded && _.every(_.keys(this.players), function(key){
-		return this.players[key].isLoaded;
-	}.bind(this))){
+	if(this.isLoaded && this.everyPlayer(function(player){
+		return player.isLoaded;
+	})){
 		this.restoreLoaded();
 		return true;
 	}
@@ -96,35 +103,33 @@ Stage.prototype.setLoaded = function(player) {
 };
 
 Stage.prototype.restoreReady = function() {
-	_.each(_.keys(this.players), function(key){
-		this.players[key].isReady = false;
-	}.bind(this));
+	this.eachPlayer(function(player){
+		player.isReady = false;
+	});
 }
 
 Stage.prototype.restoreLoaded = function() {
-	_.each(_.keys(this.players), function(key){
-		this.players[key].isLoaded = false;
-	}.bind(this));
+	this.eachPlayer(function(player){
+		player.isLoaded = false;
+	});
 	this.isLoaded = false;
 };
 
 Stage.prototype.startGame = function() {
-	_.each(_.keys(this.players), function(key){
-		this.players[key].isLoaded = false;
-		this.players[key].isReady = false;
-	}.bind(this));
+	this.restoreLoaded();
+	this.restoreReady();
 	this.lastCardTime = 0;
 	this.state = Stage.STATE_SPEEDY;
 };
 
-Stage.prototype.playCard = function(player, card, board) {
+Stage.prototype.playCard = function(player, card, boardId) {
 	if(this.state !== Stage.STATE_PLAY) {
 		return false;
 	}
-	if(board >= this.boards.length){
+	var board = this.boards[boardId];
+	if(board === undefined){
 		return false;
 	}
-	var board = this.boards[board];
 	if(this.checkCardProximity(card, board.current)){
 		board.current = card;
 		return true;
@@ -142,10 +147,7 @@ Stage.prototype.randomizeBoards = function() {
 
 Stage.prototype.isMoveExist = function() {
 	var found = false;
-	var keys = _.keys(this.players);
-	keys = _.shuffle(keys);
-	_.each(keys, function(key){
-		var player = this.players[key];
+	this.eachPlayer(function(player){
 		for (var i = 0; i < this.boards.length; i++) {
 			for (var j = 0; j < player.hand.length; j++) {
 				if(player.hand === undefined){
@@ -157,25 +159,49 @@ Stage.prototype.isMoveExist = function() {
 				}
 			};
 		};
-	}.bind(this));
+	}, true);
 	return found;
 };
 
 Stage.prototype.isWin = function() {
-	this.winner = false;
-	_.each(_.keys(this.players), function(key){
-		var player = this.players[key];
-		if(player.library.length === 0 && _.every(player.hand, function(card){ return card === undefined; })){
-			this.winner = player.id;
-			return false;
-		}
-	}.bind(this));
+	this.winner = this.findPlayer(function(player){
+		return player.isWin();
+	});
 	return this.winner;
 };
 
 Stage.prototype.checkCardProximity = function(card1, card2) {
 	return (card2 + 10 - 1) % 10 === card1 || (card2 + 10 + 1) % 10 === card1
 };
+
+Stage.prototype.eachPlayer = function(func, isRandom) {
+	var keys = _.keys(this.players);
+	if(isRandom){
+		keys = _.shuffle(keys);
+	}
+	_.each(keys, function(key){
+		func.call(this, this.players[key]);
+	}.bind(this));
+};
+
+Stage.prototype.somePlayer = function(func) {
+	return _.some(_.keys(this.players), function(key){
+		return func.call(this, this.players[key]);
+	}.bind(this));
+};
+
+Stage.prototype.everyPlayer = function(func) {
+	return _.every(_.keys(this.players), function(key){
+		return func.call(this, this.players[key]);
+	}.bind(this));
+};
+
+Stage.prototype.findPlayer = function(func) {
+	return _.find(_.keys(this.players), function(key){
+		return func.call(this, this.players[key]);
+	}.bind(this));
+}
+
 
 Stage.prototype.quit = function() {
 	
