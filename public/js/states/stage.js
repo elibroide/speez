@@ -9,6 +9,7 @@ var stageState;
 	var container;
 	var boards;
 	var timerBall;
+	var achievementBoard;
 
 	function drawGui(){
 
@@ -53,6 +54,9 @@ var stageState;
 		
 		incoming = new com.speez.components.Incoming(originalWidthCenter, originalHeightCenter);
 		container.addChild(incoming);
+
+		achievementBoard = new com.speez.components.AchievementBoard(originalWidthCenter, -100, 0, 0);
+		container.addChild(achievementBoard);
 	}
 
 	function handleTimerBallExpandBreak(){
@@ -67,6 +71,7 @@ var stageState;
 	function handleIncomingComplete(){
 		setBoards();
 		timerBall.deflate();
+		achievementBoard.show();
 		if(config.isTest){
 			return;
 		}
@@ -105,6 +110,7 @@ var stageState;
 		console.log('handleSpeedy:', data);
 		stage.game.boards = data.boards;
 		timerBall.expand(null, handleTimerBallExpandBreak);
+		achievementBoard.hide();
 	}
 
 	function handleCard(data){
@@ -116,15 +122,54 @@ var stageState;
 	function handleWinner(data){
 		console.log('handleWinner:', data);
 		stage.game.winner = data.winner;
+		stage.players[data.winner].victories++;
 		timerBall.expand(handleWinnerTimerBallExpand);
+		achievementBoard.hide();
+	}
+
+	function handleAchieve(data){
+		console.log('handleAchieve:', data);
+		var achievement = getAchievement(data.achievement, stage.players[data.player], data.data);
+		if(!achievement.text){
+			return;
+		}
+		achievementBoard.add(achievement.text);
 	}
 
 	// other
 
+	function getAchievement(achieve, player, data){
+		switch(achieve){
+			case 'screwed':
+				return { text: data.name + ' blocked ' + player.name };
+			case 'firstOfGame':
+				return { text: player.name + ' played the first card' };
+			case 'streak':
+				return { text: player.name + ' is ' + getStreakName(data.level) };
+			// case 'streakBroke':
+			// 	return { text: player.name + ' stopped ' + data.name + '\'s streak' };
+			case 'last':
+				return { text: player.name + ' has ' + data.count + ' card' + (data.count === 1 ? '' : 's') };
+			case 'test':
+				return { text: 'I am testing this thing' };
+		}
+	}
+
+	function getStreakName(level){
+		switch(level){
+			case 1:
+				return 'Great';
+			case 2:
+				return 'Amazing';
+			case 3:
+				return 'AWESOME';
+		}
+	} 
+
 	function doSpeedy(){
 		if(config.isTest){
-			handleWinner({ winner: 0 });
-			// handleSpeedy({ boards: generateBoards() });
+			// handleWinner({ winner: 0 });
+			handleSpeedy({ boards: generateBoards() });
 			return;
 		}
 		socket.emit('speed:stage:speedy', null, handleSpeedy);
@@ -174,6 +219,9 @@ var stageState;
 		var playerId = 0;
 		game.input.keyboard.onPressCallback = function(key, event){
 			switch(event.charCode){
+				case 113:
+					handleAchieve({ achievement: 'firstOfGame', player: 0 });
+					break;
 				default:
 					if(event.charCode >= 48 && event.charCode <= 57){
 						var number = event.charCode - 48;
@@ -210,6 +258,7 @@ var stageState;
 			socket.on('speed:stage:start', handleStart);
 			socket.on('speed:stage:card', handleCard);
 			socket.on('speed:stage:winner', handleWinner);
+			socket.on('speed:stage:achieve', handleAchieve);
 			socket.emit('speed:stage:loaded');
 		},
 
@@ -218,6 +267,7 @@ var stageState;
 		},
 
 		shutdown: function(){
+			socket.off('speed:stage:achieve', handleAchieve);
 			socket.off('speed:stage:start', handleStart);
 			socket.off('speed:stage:card', handleCard);
 			socket.off('speed:stage:winner', handleWinner);

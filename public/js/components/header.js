@@ -25,9 +25,7 @@ com.speez.components.Header = (function(){
 
 	    game.add.existing(this);
 
-	    this.background = game.add.graphics();
-		this.background.beginFill(options.color);
-		this.background.drawRect(0, 0, width, height);
+	    this.background = new ColorBox(0, 0, width, height, options.color);
 	    this.addChild(this.background);
 
 		this.headerArea = new com.LayoutArea(0, 0, width, height, {
@@ -73,11 +71,41 @@ com.speez.components.Header = (function(){
 	Header.prototype.constructor = Header;
 
 	Header.prototype.setText = function(text) {
+		this.options.text = text;
+		if(this.timeline && this.timeline.isActive()){
+			return;
+		}
 		this.title.text = text;
 	};
 
 	Header.prototype.add = function(items, location, options) {
 		
+	};
+
+	Header.prototype.tweenTitle = function(text, color, time) {
+		var textTimeline = new TimelineLite();
+		textTimeline.to(this.title, time, { alpha: 0 });
+		textTimeline.add(this.background.tweenColor(color, time * 2), 0);
+		textTimeline.add(function(){
+			if(text === null){
+				this.title.text = this.options.text;
+				return;
+			}
+			this.title.text = text;
+		}.bind(this));
+		textTimeline.to(this.title, time, { alpha: 1 });
+		return textTimeline;
+	};
+
+	Header.prototype.tweenTitleDelay = function(text, color, time, delayTime) {
+		if(this.timeline){
+			this.timeline.kill();
+			this.timeline = null;
+		}
+		var timeline = new TimelineLite();
+		timeline.add(this.tweenTitle(text, color, time));
+		timeline.add(this.tweenTitle(null, this.options.color, time), '+=' + delayTime);
+		this.timeline = timeline;
 	};
 
 	return Header;

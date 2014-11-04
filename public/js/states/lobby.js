@@ -94,16 +94,6 @@ var lobbyState = (function(){
 		btnBoardsCount.text.setText( 'Boards Count: ' + stage.game.boardCount);
 	}
 
-	function handleStartGameClick(){
-        game.state.start('stage');
-        var i = 0;
-        _.each(_.keys(stage.players), function(key){
-        	var player = stage.players[key];
-        	player.icon = getAvailableIcon();
-			player.icon.setPlayer(data.name);
-        });
-	}
-
 	// socket handlers
 
 	function handleIdentify(data){
@@ -119,7 +109,7 @@ var lobbyState = (function(){
 		_.each(_.keys(stage.players), function(key){
 			var player = stage.players[key];
 			player.icon = getAvailableIcon();
-			player.icon.setPlayer(player.name);
+			player.icon.setPlayer(player);
 		})
 	}
 
@@ -127,8 +117,9 @@ var lobbyState = (function(){
 		console.log('speed:stage:join ' + JSON.stringify(data))
 
 		stage.players[data.id] = data;
+		data.victories = 0;
 		data.icon = getAvailableIcon();
-		data.icon.setPlayer(data.name);
+		data.icon.setPlayer(data);
 	}
 
 	function handleLeave(data){
@@ -160,6 +151,7 @@ var lobbyState = (function(){
 	}
 
 	function handleName(data){
+		stage.players[data.playerId].name = data.name;
 		stage.players[data.playerId].icon.changeName(data.name);
 	}
 

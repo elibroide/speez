@@ -93,7 +93,7 @@ com.speez.components.Board = (function(){
 	};
 
 	Board.prototype.tweenColor = function(color, time) {
-		return TweenLite.to(this, time, { colorProps: { backgroundColor: this.options.color }, ease: Sine.easeInOut }, 0)
+		return TweenLite.to(this, time, { colorProps: { backgroundColor: color }, ease: Sine.easeInOut }, 0)
 	};
 
 	Board.prototype.backgroundColor = function(color) {

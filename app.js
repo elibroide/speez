@@ -1,3 +1,4 @@
+var _ = require('underscore');
 var express = require('express.io');
 var path = require('path');
 var favicon = require('static-favicon');

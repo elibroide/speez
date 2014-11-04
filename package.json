@@ -26,6 +26,7 @@
     "bcrypt-nodejs": "*",
     "underscore": "*",
     "bower": "*",
+    "signals": "*",
     "node-uuid": "1.4.1"
   }
 }

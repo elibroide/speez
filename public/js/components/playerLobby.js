@@ -54,19 +54,25 @@ com.speez.components.PlayerLobby = (function(){
 		timeline.addLabel('half', this.options.setPlayerTime * 0.5);
 		timeline.to(this.name, this.options.setPlayerTime * 0.5, { alpha: 0 }, 'half');
 		timeline.to(this.icon, this.options.setPlayerTime * 0.5, { alpha: this.options.iconAlpha }, 'half');
+		timeline.add(function(){
+			this.icon.text = this.options.icon;
+		}.bind(this), 'half');
 		return timeline;
 	}
 
-	PlayerLobby.prototype.setPlayer = function(name) {
+	PlayerLobby.prototype.setPlayer = function(player) {
 		// player appear
-		this.player = name;
-		this.name.text = name;
+		this.player = player;
+		this.name.text = player.name;
 		this.icon.angle = 0;
 		var timeline = new TimelineLite();
 		timeline.to(this.icon, this.options.setPlayerTime, { angle: 360, ease: Elastic.easeInOut });
 		timeline.addLabel('half', this.options.setPlayerTime * 0.5);
 		timeline.to(this.name, this.options.setPlayerTime * 0.5, { alpha: 1 }, 'half');
 		timeline.to(this.icon, this.options.setPlayerTime * 0.5, { alpha: this.options.iconJoinAlpha }, 'half');
+		timeline.add(function(){
+			this.icon.text = player.victories.toString();
+		}.bind(this), 'half');
 		return timeline;
 	};
 

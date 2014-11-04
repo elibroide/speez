@@ -97,7 +97,7 @@ var mainState = (function(){
 
 	function handleTestingPlayerClicked(){
 		// mockup
-		var colors = ["0xbf00d8", "0xd84100", "0xdbaf00", "0xa1ff00", "0x00c8cc", "0x0065bf"];
+		var colors = [0xbf00d8, 0xd84100, 0xdbaf00, 0xa1ff00, 0x00c8cc, 0x0065bf];
 		colors = _.shuffle(colors);
 		player = {
 			winner: true,
@@ -165,7 +165,8 @@ var mainState = (function(){
 	}
 
 	function handleChangeName(){
-		socket.emit('speed:player:name', { name: '' }, handleName);
+		var name = prompt('Enter Name');
+		socket.emit('speed:player:name', { name: name }, handleName);
 	}
 
 	function handleLeaveClicked(){
@@ -176,7 +177,7 @@ var mainState = (function(){
 	// socket handlers
 
 	function handleJoin(data){
-		console.log('speed:player:join', JSON.stringify(data))
+		console.log('handleJoin:', data);
 		if(!data.confirm){
 			textStatus.setText(data.reason);
 			toggleButtons(true);
@@ -194,12 +195,14 @@ var mainState = (function(){
 	}
 
 	function handleLeave(data){
+		console.log('handleLeave:', data);
 		textStatus.setText('Declined: ' + data.reason);
 		toggleButtons(true);
 		toggleLobby(false);
 	}
 
 	function handleLoad(data){
+		console.log('handleLoad:', data);
 		player.game = data;
 		toggleLobby(false);
 		common.tweenStageColor(0xffffff, function(){
@@ -208,7 +211,14 @@ var mainState = (function(){
 	}
 
 	function handleName(data){
+		console.log('handleName:', data);
+		player.name = data.name;
 		textStatus.setText(data.name);
+	}
+
+	function handleNotify(data){
+		console.log('handleNotify:', data);
+		
 	}
 
 	// debug 
@@ -252,6 +262,7 @@ var mainState = (function(){
 			drawGui();
 
 			socket.on('speed:player:load', handleLoad);
+			socket.on('speed:player:notify', handleNotify);
 
 			debugLatency();
 

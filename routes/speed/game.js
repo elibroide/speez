@@ -8,25 +8,9 @@ var routes = {
 	player: require('./player'),
 }
 
-var fs = require('fs');
-var gamePath = '../../game/speez/';
-var game = {
-	Stage: require(gamePath + 'stage'),
-	Player: require(gamePath + 'player'),
-};
-
-var config = getConfig();
 var games = _.shuffle(_.range(1, 10));
 var gameId = 'brobro.speez';
 var runningGames = {};
-
-function getConfig(){
-	var config = JSON.parse(fs.readFileSync('routes/speed/speezConfig.json', 'utf8'))
-	config.colors = _.map(config.colors, function(color){
-		return parseInt(color);
-	})
-	return config;
-}
 
 function getSlot(){
 	if(games.length === 0){
@@ -42,6 +26,14 @@ function returnSlot(slot){
 function connect(){
 	console.log('Connecting');
 	this.on('disconnect', disconnect);
+	this.leavePlayer = function(){
+		this.leave(this.player.stage.roomId);
+		delete this.player;
+	}
+	this.leaveStage = function(){
+		this.leave(this.stage.roomId);
+		delete this.stage;
+	}
 	this.speezId = uuid.v4();
 }
 
@@ -49,26 +41,9 @@ function disconnect(){
 	console.log('Disconnect');
 	if(this.stage){
 		returnSlot(this.stage.id);
-		this.stage.quit();
-		this.stage.eachPlayer(function(player){
-			player.socket.emit('speed:player:leave', {
-				code: game.Player.QUIT_STAGE_DISCONNECTED,
-				reason: 'stage disconnected'
-			});
-			var playerSocket = player;
-			delete playerSocket.player;
-		});
+		routes.stage.disconnect(this);
 	} else if(this.player){
-		var stage = this.player.stage;
-		stage.leave(this.player);
-		stage.socket.emit('speed:stage:leave', {
-			id: this.player.id,
-			code: game.Stage.LEAVE_DISCONNECT,
-			reason: 'player disconnected',
-		});
-		var playerSocket = this.player.socket;
-		playerSocket.leave(stage.roomId);
-		delete playerSocket.player;
+		routes.player.disconnect(this);
 	}
 }
 
@@ -95,64 +70,6 @@ function checkPlayerActive(req, next){
 	next();
 }
 
-function create(req){
-	req.socket.gameId = gameId;
-	var stage = new game.Stage(req.socket, this.id, config);
-	stage.id = getSlot();
-	stage.roomId = gameId + ':' + stage.id;
-	runningGames[stage.id] = stage;
-	req.socket.stage = stage
-	// req.socket.join(stage.roomId);
-	req.io.respond({
-		id: stage.id,
-	});	
-	stage.broadcast = function(id, data, func){
-		this.socket.broadcast.to(this.roomId).emit(id, data, func);
-	}
-}
-
-function join(req){
-	var stage = runningGames[req.data.id];
-	if(!stage){
-		req.io.respond({
-			confirm: false,
-			code: 100,
-			reason: 'stage doesn\'t exist',
-		});
-		return;
-	}
-	if(stage.players.length >= game.Stage.MAX_PLAYERS){
-		req.io.respond({
-			confirm: false,
-			code: 101,
-			reason: 'stage is full',
-		});
-		return;
-	}
-	var id = req.socket.speezId;
-	var player = new game.Player(req.socket, id, stage);
-	stage.players[id] = player;
-	var join = stage.join(player);
-	if(join.confirm === false){
-		req.io.respond({
-			confirm: false,
-			code: join.code,
-			reason: join.reason,
-		});
-		return;
-	}
-	player.name = join.name;
-	stage.socket.emit('speed:stage:join', _.pick(player, ['id', 'name']));
-	req.socket.join(stage.roomId);
-	req.socket.gameId = gameId;
-	req.socket.player = player;
-	req.io.respond({
-		confirm: true,
-		id: player.id,
-		name: player.name,
-	});
-}
-
 function middleLog(req, next){
 	var data = req.data ? 'data=' + JSON.stringify(req.data) : '';
 	console.log(req.socket.speezId + ': ' + req.io.event, data );
@@ -166,13 +83,39 @@ function getRoutes(app){
 	app.io.use(/^speed/, middleLog);
 	app.io.use(/^speed:stage/, checkStageActive);
 	app.io.use(/^speed:player/, checkPlayerActive);
-	app.io.route('speed:stage', routes.stage);
-	app.io.route('speed:player', routes.player);
+	app.io.route('speed:stage', routes.stage.messages);
+	app.io.route('speed:player', routes.player.messages);
 	
 	var route = {
 		// Identify as a player of stage
-		create: create,
-		join: join,
+		create: function(req){
+			var id = getSlot();
+			// TODO: Check id
+			var stage = routes.stage.create(req, id);
+			stage.broadcast = function(id, data, func){
+				this.socket.broadcast.to(this.roomId).emit(id, data, func);
+			}
+			stage.roomId = gameId + ':' + stage.id;
+			req.socket.stage = stage;
+			// req.socket.join(stage.roomId);
+			req.socket.gameId = gameId;
+			runningGames[id] = stage;
+		},
+		join: function(req){
+			var stage = runningGames[req.data.id];
+			if(!stage){
+				req.io.respond({
+					confirm: false,
+					code: 100,
+					reason: 'stage doesn\'t exist',
+				});
+				return;
+			}
+			var player = routes.player.join(req, stage);
+			req.socket.join(stage.roomId);
+			req.socket.gameId = gameId;
+			req.socket.player = player;
+		},
 	}
 	app.io.route('speed', route);
 }

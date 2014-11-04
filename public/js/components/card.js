@@ -5,8 +5,8 @@ com.speez.components.Card = (function(){
 	Card = function (index, x, y, width, height, options) {
 		
 		options = _.extend({
-			x: x,
-			y: y,
+			x: 0,
+			y: 0,
 			index: index,
 			width: width,
 			height: height,
@@ -304,6 +304,7 @@ com.speez.components.Card = (function(){
 
 	Card.prototype.placeCardOverlap = function() {
 		var index = this.overlap - this.index;
+		console.log(index);
 		var y = index * this.options.height * Layout.instance.scaleY;
 		var timeline = new TimelineLite();
 		timeline.to(this, this.options.placeCardTime, { x: this.options.x, y: y, alpha: 0 });
@@ -315,6 +316,7 @@ com.speez.components.Card = (function(){
 		this.alpha = 1;
 		this.x = this.options.x;
 		this.y = this.options.y;
+		this.text.alpha = 1;
 		this.text.fill = '#' + this.options.textColor.toString(16);
 		this.text.scale.set(1,1);
 		this.background.setColor(this.options.color);

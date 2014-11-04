@@ -23,9 +23,6 @@ var playerState = (function(){
 	var cardHeight;
 
 	var overlapCard;
-	var heldCard;
-	var heldCardBoardId;
-	var heldCardOverlapId;
 
 	function drawGui(){
 		// sizes
@@ -41,7 +38,7 @@ var playerState = (function(){
 		boards = [];
 		colors = [];
 		for (var i = 0; i < player.game.boards.length; i++) {
-			colors.push(parseInt(player.game.boards[i].color));
+			colors.push(player.game.boards[i].color);
 		};
 		switch(player.game.boards.length) {
 			case 2:
@@ -61,8 +58,8 @@ var playerState = (function(){
 			case 4:
 				boards[0] = new com.speez.components.Board(0, headerHeight, boardWidth, gameHeightCenter, colors[0]);
 				boards[1] = new com.speez.components.Board(boardWidthRight, headerHeight, boardWidth, gameHeightCenter, colors[1]);
-				boards[2] = new com.speez.components.Board(0, boardMiddle, boardWidth, gameHeightCenter, colors[2])
-				boards[3] = new com.speez.components.Board(boardWidthRight, boardMiddle, boardWidth, gameHeightCenter, colors[3])
+				boards[2] = new com.speez.components.Board(0, boardMiddle, boardWidth, gameHeightCenter, colors[2]);
+				boards[3] = new com.speez.components.Board(boardWidthRight, boardMiddle, boardWidth, gameHeightCenter, colors[3]);
 				break;
 		}
 
@@ -102,8 +99,6 @@ var playerState = (function(){
 			return;
 		}
 
-		socket.on('speed:player:start', handleStart);
-		socket.on('speed:player:winner', handleWinner);
 		socket.emit('speed:player:loaded');
 	}
 
@@ -133,18 +128,17 @@ var playerState = (function(){
 	}
 
 	function holdCard(card){
-		heldCard = card;
 		_.invoke(hand, 'enable', false);
 	}
 
 	function placeCardBoard(card, thresholdId){
 		card.placeCardBoard();
-		heldCardBoardId = getBoard(thresholdId);
+		var boardId = getBoard(thresholdId);
 		if(config.isTest){
-			testCardPutBoard({ boardId: heldCardBoardId, handId: card.index });
+			testCardPutBoard({ boardId: boardId, handId: card.index });
 			return;
 		}
-		socket.emit('speed:player:cardBoard', { boardId: heldCardBoardId, handId: card.index }, handleCardBoard);
+		socket.emit('speed:player:cardBoard', { boardId: boardId, handId: card.index }, handleCardBoard);
 	}
 
 	function placeCardOverlap(card, overlap){
@@ -197,20 +191,19 @@ var playerState = (function(){
 
 	function handleWinner(data){
 		console.log('handleWinner:', data);
-		var timeline = new TimelineLite();
+		var timeline = new TimelineLite({ delay: 1 });
 		var dissipateTime = 1;
 		player.game.winner = data.winner;
 		if(data.winner){
 			// play winner animation
-			_.invoke(hand, 'unattach');
 			_.invoke(hand, 'reject');
 			var distance = 100;
 			var speezTime = 1;
 			var getHeight = hand[0].options.height * Layout.instance.scaleY;
-			timeline.to(hand[0], speezTime, { x: 150 - distance * 2, y: '+=' + getHeight * 2, ease: Back.easeOut }, 0);
-			timeline.to(hand[1], speezTime, { x: 150 - distance, y: '+=' + getHeight * 1, ease: Back.easeOut  }, 0);
-			timeline.to(hand[3], speezTime, { x: 150 + distance, y: '-=' + getHeight * 1, ease: Back.easeOut  }, 0);
-			timeline.to(hand[4], speezTime, { x: 150 + distance * 2, y: '-=' + getHeight * 2, ease: Back.easeOut  }, 0);
+			timeline.to(hand[0], speezTime, { x: -distance * 2, y: '+=' + getHeight * 2, ease: Back.easeOut }, 0);
+			timeline.to(hand[1], speezTime, { x: -distance, y: '+=' + getHeight * 1, ease: Back.easeOut  }, 0);
+			timeline.to(hand[3], speezTime, { x: distance, y: '-=' + getHeight * 1, ease: Back.easeOut  }, 0);
+			timeline.to(hand[4], speezTime, { x: distance * 2, y: '-=' + getHeight * 2, ease: Back.easeOut  }, 0);
 			timeline.to(boards, speezTime, { alpha: 0 }, 0);
 			var texts = _.pluck(hand, 'text');
 			timeline.to(_.pluck(texts, 'scale'), speezTime, { x: 1, y: 1 }, 0);
@@ -219,8 +212,8 @@ var playerState = (function(){
 			timeline.addLabel('dissipate');
 		} else {
 			// play looser animation
-			_.invoke(hand, 'reject')
-			_.invoke(hand, 'enable', false)
+			_.invoke(hand, 'reject');
+			_.invoke(hand, 'enable', false);
 			timeline.to(boards, dissipateTime, { alpha: 0 }, 0);
 			timeline.addLabel('dissipate');
 		}
@@ -243,15 +236,22 @@ var playerState = (function(){
 			_.invoke(hand, 'reject')
 			return;
 		}
-		hand[data.handId].enable(false);
-		hand[data.overlapId].reject();
-
-		var newCard = drawCard(data.newCard, data.handId, false, false);
+		// Destroy old card
+		var oldCard = hand[data.handId];
+		oldCard.enable(false);
+		_.delay(function(){
+			oldCard.destroy();
+		}, oldCard.options.placeCardTime * 1000);
+		// create new card
+		player.game.cardCount--;
+		var isEmpty = player.game.cardCount < 5;
+		var newCard = drawCard(data.newCard, data.handId, false, isEmpty);
 		newCard.startCard();
-		// var timeline = new TimelineLite();
-		// timeline.add(newCard.startCard());
-		// timeline.add(newCard.appearCard());
-		// timeline.timeScale(2);
+		if(isEmpty){
+			newCard.enable(false);
+		}
+		hand[data.overlapId].reject();
+		header.setText(getHeaderText());
 	}
 
 	function handleCardBoard(data){
@@ -260,10 +260,11 @@ var playerState = (function(){
 		_.invoke(boards, 'cancelProximity');
 		if(!data.confirm){
 			// reject
+			debugger;
 			_.invoke(hand, 'reject')
 			var timeline = new TimelineLite();
-			var color = boards[heldCardBoardId].options.color;
-			var isLeft = heldCardBoardId % 2 === 0;
+			var color = boards[data.boardId].options.color;
+			var isLeft = data.boardId % 2 === 0;
 			timeline.add(_.invoke(hand, 'shake', isLeft, color), null, null, 0.05);
 			// timeline.add(_.invoke(hand, 'shake'), '-=0.75', null, 0.05);
 			return;
@@ -278,10 +279,48 @@ var playerState = (function(){
 		header.setText(getHeaderText());
 	}
 
+	function handleAchievement(data){
+		console.log('handleAchievement:', data);
+		var achievment = getAchievementData(data.achievement, data.data);
+		if(!achievment){
+			return;
+		}
+		var color = achievment.isGood ? 0x00aa00 : 0xaa0000;
+		header.tweenTitleDelay(achievment.text, color, 0.1, 5);
+	}
+
 	// other
 
-	function setNewCard(card, index, isEmpty) {
-		
+	function getAchievementData(achieve, data){
+		switch(achieve){
+			case 'screwed':
+				return { text: 'Blocked by ' + data.name, isGood: false };
+			case 'screw':
+				return { text: 'You blocked ' + data.name, isGood: true };
+			case 'firstOfGame':
+				return { text: 'First card', isGood: true };
+			case 'streak':
+				return { text: 'You are ' + getStreakName(data.level), isGood: true };
+			// case 'streakBroke':
+			// 	return { text: data.name + ' stopped your streak', isGood: false };
+			case 'streakBreak':
+				return { text: 'You stopped ' + data.name + '\'s streak', isGood: true };
+			case 'last':
+				return { text: data.count + ' card' + (data.count === 1 ? '' : 's') + ' left', isGood: true };
+			case 'test':
+				return { text: 'I am testing this thing', isGood: data.isGood };
+		}
+	}
+
+	function getStreakName(level){
+		switch(level){
+			case 1:
+				return 'Great';
+			case 2:
+				return 'Amazing';
+			case 3:
+				return 'AWESOME';
+		}
 	}
 
 	function compareCards(card1, card2){
@@ -325,13 +364,23 @@ var playerState = (function(){
 	}
 
 	function getHeaderText(){
-		return player.name + ' - ' + player.game.cardCount;
+		return player.name + ' - ' + player.game.cardCount + ' card' + (player.game.cardCount < 2 ? '' : 's' ) + ' left';
 	}
 
 	// test
 
 	function setTest(){
 		handleStart();
+		game.input.keyboard.onPressCallback = function(key, event){
+			switch(event.charCode){
+				case 49:
+					handleAchievement({ achievement: 'test', data: { isGood: false } });
+					break;
+				case 50: 
+					handleAchievement({ achievement: 'test', data: { isGood: true } });
+					break;
+			}
+		}
 	}
 
 	function testCardPutOverlap(card, overlapId){
@@ -347,7 +396,7 @@ var playerState = (function(){
 				if(player.game.cardCount === 0){
 					setTimeout(function(){
 						handleWinner({winner: true});
-					}, 1000);
+					}, 10);
 				}
 			} else {
 				setTimeout(function(){ 
@@ -355,7 +404,7 @@ var playerState = (function(){
 					if(player.game.cardCount === 0){
 						setTimeout(function(){
 							handleWinner({winner: false});
-						}, 1000);
+						}, 10);
 					}
 				}, 1000);
 			}
@@ -386,6 +435,10 @@ var playerState = (function(){
 		create: function(){
 			lastCards = 5;
 			common.tweenStageColor(0x333333, handleStageReady);
+
+			socket.on('speed:player:start', handleStart);
+			socket.on('speed:player:winner', handleWinner);
+			socket.on('speed:player:achieve', handleAchievement);
 		},
 
 		update: function(){
@@ -393,6 +446,7 @@ var playerState = (function(){
 
 		shutdown: function(){
 			socket.off('speed:player:start', handleStart);
+			socket.off('speed:player:achieve', handleAchievement);
 			socket.off('speed:player:winner', handleWinner);
 		},
 	}

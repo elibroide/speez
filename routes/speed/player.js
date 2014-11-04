@@ -3,8 +3,53 @@
 var _ = require('underscore');
 var gamePath = '../../game/speez/';
 var Stage = require(gamePath + 'stage');
+var Player = require(gamePath + 'player');
 
-module.exports = {
+// exports
+
+module.exports.join = function(req, stage) {
+	if(stage.players.length >= Stage.MAX_PLAYERS){
+		req.io.respond({
+			confirm: false,
+			code: 101,
+			reason: 'stage is full',
+		});
+		return;
+	}
+	var id = req.socket.speezId;
+	var player = new Player(req.socket, id, stage);
+	stage.players[id] = player;
+	var join = stage.join(player);
+	if(join.confirm === false){
+		req.io.respond({
+			confirm: false,
+			code: join.code,
+			reason: join.reason,
+		});
+		return;
+	}
+	player.name = join.name;
+	stage.socket.emit('speed:stage:join', _.pick(player, ['id', 'name']));
+	req.io.respond({
+		confirm: true,
+		id: player.id,
+		name: player.name,
+	});
+	return player;
+}
+
+module.exports.disconnect = function(socket){
+	var stage = socket.player.stage;
+	stage.leave(socket.player);
+	stage.socket.emit('speed:stage:leave', {
+		id: socket.player.id,
+		code: Stage.LEAVE_DISCONNECT,
+		reason: 'player disconnected',
+	});
+	socket.leavePlayer();
+}
+
+module.exports.messages = {
 
 	name: function(req){
 		if(req.data.name){
@@ -38,21 +83,32 @@ module.exports = {
 		if(!isAllReady){
 			return;
 		}
-		var options = { cardCount: 15, boardCount: 2 };
+		
+		// setting player/stage load data
+		var options = { cardCount: 20, boardCount: 2 };
 		req.stage.setConfig(options);
+		var playerBoards = _.map(req.stage.boards, function(board){
+			return {color: board.color}; 
+		});
+
+		// loading each player
 		_.each(_.keys(req.stage.players), function(key){
+			// setting player load data
 			var player = req.stage.players[key];
 			player.setConfig(options);
-			// Send data to player
 			var playerData = _.pick(player, [ 'cardCount', 'boardCount', 'hand' ]);
-			var boards = _.map(req.stage.boards, function(board) {
-				return { color: board.color };
-			});
-			playerData = _.extend(playerData, { boards: boards });
+			playerData.boards = playerBoards;
 			player.socket.emit('speed:player:load', playerData);
 		})
+
+		// Getting stage load data
 		req.stage.randomizeBoards();
-		req.stage.socket.emit('speed:stage:load', _.pick(req.stage, [ 'cardCount', 'boardCount', 'boards' ]));
+		var boards = _.map(req.stage.boards, function(board) {
+			return _.pick(board, [ 'color', 'current' ]);
+		});
+		var stageData = _.pick(req.stage,  [ 'cardCount', 'boardCount' ]);
+		stageData = _.extend(stageData, { boards: boards });
+		req.stage.socket.emit('speed:stage:load', stageData);
 	},
 
 	loaded: function(req){
@@ -65,12 +121,12 @@ module.exports = {
 	},
 
 	cardBoard: function(req){
-		var data = req.player.playCard(req.data.handId, req.data.boardId);
+		var data = req.player.playCardBoard(req.data.handId, req.data.boardId);
 		if(!data){
-			req.io.respond({ confirm: false })
+			req.io.respond({ confirm: false, handId: req.data.handId, boardId: req.data.boardId })
 			return;
 		}
-		req.io.respond({ confirm: true, handId: req.data.handId, newCard: data.newCard });
+		req.io.respond({ confirm: true, handId: req.data.handId, newCard: data.newCard, streakCount: req.player.streakCount });
 		var win = req.stage.isWin();
 		req.stage.socket.emit('speed:stage:card', { boardId: req.data.boardId, card: data.card, playerId: req.player.id });
 		if(win){
@@ -88,7 +144,7 @@ module.exports = {
 	cardOverlap: function(req) {
 		var data = req.player.playOverlap(req.data.handId, req.data.overlapId);
 		if(data === false){
-			req.io.respond({ confirm: false });
+			req.io.respond({ confirm: false, handId: req.data.handId, overlapId: req.data.overlapId });
 			return;
 		}
 		req.io.respond({ confirm: true, 

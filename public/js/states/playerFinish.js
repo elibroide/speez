@@ -15,7 +15,7 @@ var playerFinishState = (function(){
 	function drawGui(){		
 		headerHeight = originalHeight * 0.125;
 		header = new com.speez.components.Header(originalWidth, headerHeight, {
-			text: player.name + ' - ' + player.game.cardCount,
+			text: player.name,
 			color: 0xffffff,
 		});
 

@@ -83,8 +83,10 @@ com.speez.components.TimerBall = (function(){
 	function setCounting(){
 		var options = this.options.counting;
 		var timeline = new TimelineLite({ });
+		console.log('starting');
 		timeline.addLabel('counting');
-		timeline.to(this.scale, options.time, { x: options.scale, y: options.scale, ease: Sine.easeIn }, 'counting');
+		timeline.to(this, options.time, { colorProps: { backgroundColor: this.options.color } }, 'counting');
+		timeline.to(this.scale, options.time, { x: options.scale, y: options.scale, ease: Power3.easeIn }, 'counting');
 		timeline.add(function(){
 			if(options.complete){
 				options.complete();
@@ -127,12 +129,12 @@ com.speez.components.TimerBall = (function(){
 		timeline.addLabel('card');
 		timeline.fromTo(this.scale, options.time, {x: 0.5, y: 0.5}, { x: 1, y: 1, ease: Elastic.easeOut }, 'card');
 		timeline.to(this, options.time / 2, { colorProps: { backgroundColor: color } }, 'card');
-		timeline.to(this, options.time / 2, { colorProps: { backgroundColor: this.options.color } }, 'card');
+		timeline.addLabel('cardHalf');
 		timeline.add(function(){
 			if(options.complete){
 				options.complete();
 			}
-		}, '+=' + options.delayTime);
+		}, 'cardHalf+=' + options.delayTime);
 		timeline.addLabel('cardEnded');
 
 		// timeline.add(function(){ console.log('card started') }, 'card');
