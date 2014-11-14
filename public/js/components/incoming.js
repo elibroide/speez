@@ -19,6 +19,9 @@ com.speez.components.Incoming = (function(){
 	function tweenStart(incoming){
 		var target = this.target;
 		incoming.addChild(target);
+		if(target.sound){
+			Audio.instance.play('fx', target.sound);
+		}
 	}
 
 	function tweenComplete(incoming){
@@ -30,14 +33,21 @@ com.speez.components.Incoming = (function(){
 	// public methods
 
 	Incoming.prototype.makeTexts = function(texts, format) {
-		var items = [];
-		$.each(texts, function(index, item){
-			var text = new Phaser.Text(game, 0, 0, item, format);
+		return _.map(texts, function(item){
+			var text = new Phaser.Text(game, 0, 0, item.text, format);
 	    	text.anchor.set(0.5);
-	    	items.push(text);
+	    	text.sound = item.sound;
+	    	return text;
 		}.bind(this))
-		return items;
 	}
+
+	Incoming.prototype.stop = function() {
+		if(this.timeline) {
+			this.timeline.kill();
+		}
+		var timeline = new TimelineLite();
+		timeline.to(this, 1, { alpha: 0 });
+	};
 
 	Incoming.prototype.show = function(items, options) {
 		options = _.extend({
@@ -62,7 +72,7 @@ com.speez.components.Incoming = (function(){
 		}
 
 		var scales = [];
-		$.each(items, function(index, item){
+		_.each(items, function(item){
 			scales.push(item.scale);
 			item.scale.set(options.fromScale);
 			item.alpha = 0;
@@ -79,6 +89,10 @@ com.speez.components.Incoming = (function(){
 			options.completeTime = 0;
 		} 
 		timeline.add(options.complete, '-=' + options.completeTime);
+		if(this.timeline){
+			this.timeline.kill();
+		}
+		this.timeline = timeline;
 	};
 
 	return Incoming;

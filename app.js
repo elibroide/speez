@@ -7,6 +7,8 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var speed = require('./routes/speed/game');
 
+// Initiate
+
 app = express();
 app.http().io();
 require('express.io-middleware')(app);

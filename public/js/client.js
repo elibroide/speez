@@ -17,7 +17,7 @@ var player;
 var world;
 var Layout = com.Layout;
 
-var version = '0.0.0-5';
+var version = '0.0.0-10';
 
 function init(){
 
@@ -36,9 +36,13 @@ function init(){
     var script = $('<script>').attr('type', 'text/javascript').attr('src', config.address + 'socket.io/socket.io.js')
     $('head').append(script);
 
+    // initiate singletones
+    var audio = new Audio();
+
     game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.CANVAS, 'container');
 
     game.state.add('boot', bootState);
+    game.state.add('preload', preloadState);
     game.state.add('main', mainState);
     game.state.add('player', playerState);
     game.state.add('playerFinish', playerFinishState);

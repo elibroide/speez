@@ -44,16 +44,19 @@ com.speez.components.MenuButton = (function(){
 	    }.bind(this));
 	    this.events.onInputDown.add(function(){
 	    	this.background.tweenColor(this.options.downColor, this.options.tweenRate);
+	    	Audio.instance.play('fx', 'button/down');
 	    }.bind(this));
-	    
+	    this.events.onInputUp.add(function(){
+	    	Audio.instance.play('fx', 'button/up');
+	    }.bind(this));
 	    if(!callback){
 	    	return;
 	    }
 	    if(options.isOnce) {
-	    	this.events.onInputDown.addOnce(callback);
+	    	this.events.onInputUp.addOnce(callback);
 	    }
 	    else{
-	    	this.events.onInputDown.add(callback);
+	    	this.events.onInputUp.add(callback);
 	    }
 	}
 

@@ -45,7 +45,7 @@ var bootState = (function(){
 
 			setScale();
 
-            game.state.start('main');
+            game.state.start('preload');
 		},
 
 		render: function(){

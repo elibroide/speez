@@ -122,11 +122,12 @@ module.exports.messages = {
 
 	cardBoard: function(req){
 		var data = req.player.playCardBoard(req.data.handId, req.data.boardId);
+		var returnData = _.pick(req.data, ['handId', 'boardId']);
 		if(!data){
-			req.io.respond({ confirm: false, handId: req.data.handId, boardId: req.data.boardId })
+			req.io.respond(_.extend({ confirm: false }, returnData))
 			return;
 		}
-		req.io.respond({ confirm: true, handId: req.data.handId, newCard: data.newCard, streakCount: req.player.streakCount });
+		req.io.respond(_.extend({ confirm: true, newCard: data.newCard, streakCount: req.player.streakCount }, returnData));
 		var win = req.stage.isWin();
 		req.stage.socket.emit('speed:stage:card', { boardId: req.data.boardId, card: data.card, playerId: req.player.id });
 		if(win){

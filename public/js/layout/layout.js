@@ -140,6 +140,9 @@ var moduel = (function(window){
 		this.pinArray = _.reject(this.pinArray, function(item){
 			return item.obj === obj;
 		});
+		if(this.pinRemoved){
+			this.pinRemoved(obj);
+		}
 	};
 
 	// Pin Decleration
@@ -197,6 +200,9 @@ var moduel = (function(window){
 		this.attachArray.push(item);
 		this.scaleAttached(item);
 		item.state = Layout.STATE_UPDATE;
+		if(this.onAttached){
+			this.onAttached(obj);
+		}
 	}
 
 	LayoutArea.prototype.unattach = function(obj) {
@@ -209,6 +215,9 @@ var moduel = (function(window){
 		this.attachArray = _.reject(this.attachArray, function(){
 			return obj === obj;
 		});
+		if(this.onUnattached){
+			this.onUnattached(obj);
+		}
 		return true;
 	}
 

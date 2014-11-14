@@ -27,7 +27,6 @@ com.speez.components.Card = (function(){
 			winnerScale: 5,
 			format: {
 		        font: "100px Arial",
-		        fill: "#eeeeee",
 		        align: "center"
 		    },
 		    textColor: 0xeeeeee,
@@ -73,6 +72,7 @@ com.speez.components.Card = (function(){
 
 	    // Adding Text
 	    this.text = new Phaser.Text(game, options.width * 0.5, options.height * 0.5, options.waitCard, options.format);
+	    this.text.fill = '#' + this.options.textColor.toString(16);
 	    this.text.anchor.set(0.5, 0.5);
 	    this.text.colorChange = common.textColorChange();
 	    this.container.addChild(this.text);
@@ -199,6 +199,9 @@ com.speez.components.Card = (function(){
 
 	Card.prototype.appearCard = function(isOverlap) {
 		var timeline = new TimelineLite();
+		timeline.add(function(){
+			Audio.instance.play('fx', 'card/draw');
+		})
 		timeline.to(this.text, this.options.spinTime, { angle: 360, ease: Back.easeInOut });
 		timeline.addLabel('spinHalf', this.options.spinTime / 2);
 		timeline.to(this.background, this.options.spinTime / 2, { alpha: 1 }, 'spinHalf');
@@ -347,10 +350,10 @@ com.speez.components.Card = (function(){
 	Card.prototype.playWinner = function() {
 		var timeline = new TimelineLite();
 		timeline.to(this.text.scale, this.options.winnerTime / 4, { x: this.options.winnerScale, y: this.options.winnerScale }, 0);
-		timeline.to(this.text, this.options.winnerTime / 4, { colorProps: { colorChange: _.random(0x555555, 0xeeeeee) } }, 0);
+		timeline.to(this.text, this.options.winnerTime / 4, { colorProps: { colorChange: _.random(0x555555, 0xcccccc) } }, 0);
 		timeline.addLabel('break', this.options.winnerTime / 4);
 		timeline.to(this.text.scale, this.options.winnerTime * 3 / 4, { x: 1, y: 1, ease: Elastic.easeOut }, 'break');
-		timeline.to(this.text, this.options.winnerTime * 3 / 4, { colorProps: { colorChange: this.options.textColor } }, 'break');
+		timeline.to(this.text, this.options.winnerTime * 3 / 4, { colorProps: { colorChange: 0xeeeeee } }, 'break');
 		return timeline;
 	};
 

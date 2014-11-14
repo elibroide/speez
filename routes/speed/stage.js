@@ -37,7 +37,9 @@ module.exports.create = function(req, id){
 }
 
 module.exports.disconnect = function(socket){
+	console.log('what the heck');
 	socket.stage.eachPlayer(function(player){
+		console.log('what the heck',player.name);
 		player.socket.emit('speed:player:leave', {
 			code: Player.QUIT_STAGE_DISCONNECTED,
 			reason: 'stage disconnected'
@@ -74,6 +76,7 @@ module.exports.messages = {
 
 	play: function(req){
 		req.stage.play();
+		req.io.respond(true);
 	},
 
 	next: function(req){

@@ -51,8 +51,8 @@ var lobbyState = (function(){
 	    playersIcons = [];
 	    var distance = 250;
 	    var colors = [ 0xFF0000, 0x336699, 0xFFCC00, 0x00ff00 ]
-	    for(var i=0;i<4;i++){
-	    	var player = new PlayerLobby(-distance * 1.5 + i * distance, 50, {
+	    for(var i=0;i<5;i++){
+	    	var player = new PlayerLobby(-distance * 2 + i * distance, 50, {
 	    		readyColor: colors[i],
 	    	});
 	    	playersIcons.push(player);
@@ -187,11 +187,10 @@ var lobbyState = (function(){
 
 		},
 
-		render: function(){
-
-		},
-
 		shutdown: function(){
+			_.each(_.keys(stage.players), function(key){
+				delete stage.players[key].icon;
+			});
 			socket.off('speed:stage:join', handleJoin);
 			socket.off('speed:stage:leave', handleLeave);
 			socket.off('speed:stage:ready', handleReady);

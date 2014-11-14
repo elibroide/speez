@@ -60,6 +60,7 @@ var playerFinishState = (function(){
 	// socket handlers
 
 	function handleNext(){
+		Audio.instance.play('fx', player.game.winner ? 'win/win' : 'lose/lose');
 		var timeline = new TimelineLite();
 		timeline.to(textWin, 0.1, { alpha: 1 });
 	}
@@ -77,6 +78,19 @@ var playerFinishState = (function(){
 			setTimeout(function(){ game.state.start('player'); }, 500);
 		}));
 		timeline.to(btnReady, 1, { alpha: 0 }, 0);
+	}
+
+	function handleLeave(data){
+		console.log('handleLeave:', data);
+		delete player;
+		TweenMax.killAll();
+		var timeline = new TimelineLite();
+		timeline.to([header, container], 1, {alpha: 0});
+		timeline.add(common.tweenStageColor(0x000000, function(){
+			setTimeout(function(){ 
+				game.state.start('main'); 
+			}, 500);
+		}));
 	}
 
 	return {

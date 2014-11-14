@@ -11,6 +11,9 @@ var stageState;
 	var timerBall;
 	var achievementBoard;
 
+	// timeline
+	var timelineEnd;
+
 	function drawGui(){
 
 		// Boards
@@ -60,7 +63,13 @@ var stageState;
 	}
 
 	function handleTimerBallExpandBreak(){
-		incoming.show(['3', '2', '1', 'SPEEZ'], { 
+		var texts = [
+			{ text: '3', sound: 'countdown/3' },
+			{ text: '2', sound: 'countdown/2' },
+			{ text: '1', sound: 'countdown/1' },
+			{ text: 'SPEEZ', sound: 'countdown/speed' },
+		]
+		incoming.show(texts, { 
 			isTexts: true,
 			complete: handleIncomingComplete,
 			completeTime: 1,
@@ -69,35 +78,55 @@ var stageState;
 
 
 	function handleIncomingComplete(){
-		setBoards();
-		timerBall.deflate();
-		achievementBoard.show();
 		if(config.isTest){
+			handlePlay();
 			return;
 		}
-		socket.emit('speed:stage:play');
+		socket.emit('speed:stage:play', handlePlay);
 	}
 
 	function handleWinnerTimerBallExpand(){
-		var texts = [ 'SPEEZ', 'Complete', '', 'The', 'Winner', 'Is' ];
+		var texts = [ 
+			{ text: 'SPEEZ', sound: 'countdown/sound' }, 
+			{ text: 'Complete', sound: '' }, 
+			{ text: '', sound: '' }, 
+			{ text: 'Winner', sound: '' }, 
+			{ text: 'Is', sound: '' }, 
+		];
 		if(config.isTest){
-			texts = ['test'];
+			// texts = [ { text: 'test' }];
 		}
 		incoming.show(texts, {
 			isTexts: true,
 			complete: function(){
-				_.delay(function(){ game.state.start('stageFinish') }, 1);
+				timelineEnd = _.delay(function(){ game.state.start('stageFinish') }, 1);
 			},
 			completeTime: 1,
+		});
+	}
+
+	function handleTimerBallExpandLeave(){
+		common.tweenStageColor(0xffffff, function(){
+			_.delay(function(){ 
+				game.state.start('lobby');
+			}, 1000);
 		});
 	}
 
 	// handling socket
 
 	function handleStart(){
-		var texts = [ 'Get', 'Ready', '5', '4', '3', '2', '1', 'SPEEZ' ];
+		var texts = [ 
+			{ text: 'Get' }, 
+			{ text: 'Ready' }, 
+			{ text: '5', sound: 'countdown/5' }, 
+			{ text: '4', sound: 'countdown/4' }, 
+			{ text: '3', sound: 'countdown/3' }, 
+			{ text: '2', sound: 'countdown/2' }, 
+			{ text: '1', sound: 'countdown/1' }, 
+			{ text: 'SPEEZ', sound: 'countdown/speed' } ];
 		if(config.isTest){
-			texts = ['test'];
+			// texts = ['test'];
 		}
 		incoming.show(texts, {
 			isTexts: true,
@@ -111,6 +140,12 @@ var stageState;
 		stage.game.boards = data.boards;
 		timerBall.expand(null, handleTimerBallExpandBreak);
 		achievementBoard.hide();
+	}
+
+	function handlePlay(){
+		setBoards();
+		timerBall.deflate();
+		achievementBoard.show();
 	}
 
 	function handleCard(data){
@@ -136,12 +171,26 @@ var stageState;
 		achievementBoard.add(achievement.text);
 	}
 
+	function handleLeave(data){
+		if(timelineEnd){
+			cancelTimeout(timelineEnd);
+		}
+		delete stage.players[data.id];
+		if(_.keys(stage.players).length !== 0){
+			return;
+		}
+		// stop the game if there are no players
+		incoming.stop();
+		timerBall.expand(handleTimerBallExpandLeave);
+		Audio.instance.stop('fx');
+	}
+
 	// other
 
 	function getAchievement(achieve, player, data){
 		switch(achieve){
-			case 'screwed':
-				return { text: data.name + ' blocked ' + player.name };
+			// case 'screwed':
+			// 	return { text: data.name + ' blocked ' + player.name };
 			case 'firstOfGame':
 				return { text: player.name + ' played the first card' };
 			case 'streak':
@@ -259,6 +308,7 @@ var stageState;
 			socket.on('speed:stage:card', handleCard);
 			socket.on('speed:stage:winner', handleWinner);
 			socket.on('speed:stage:achieve', handleAchieve);
+			socket.on('speed:stage:leave', handleLeave);
 			socket.emit('speed:stage:loaded');
 		},
 
@@ -267,6 +317,7 @@ var stageState;
 		},
 
 		shutdown: function(){
+			socket.off('speed:stage:leave', handleLeave);
 			socket.off('speed:stage:achieve', handleAchieve);
 			socket.off('speed:stage:start', handleStart);
 			socket.off('speed:stage:card', handleCard);

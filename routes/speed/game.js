@@ -21,6 +21,7 @@ function getSlot(){
 
 function returnSlot(slot){
 	games.push(slot);
+	delete runningGames[slot];
 }
 
 function connect(){

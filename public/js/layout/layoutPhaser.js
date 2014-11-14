@@ -36,12 +36,20 @@
 	}
 
 	Layout.prototype.pinAdded = function(obj, pin) {
-		if(!obj.onDestroy){
+		if(!obj.events || !obj.events.onDestroy){
 			return;
 		}
-		obj.onDestroy.add(function(){
+		obj.layoutDestroy = function(){
 			layout.unpin(obj);
-		})
+		};
+		obj.events.onDestroy.add(obj.layoutDestroy);
+	};
+
+	Layout.prototype.pinRemoved = function(obj) {
+		if(!obj.events || !obj.events.onDestroy){
+			return;
+		};
+		obj.events.onDestroy.remove(obj.layoutDestroy);
 	};
 
 	// LayoutArea
@@ -74,6 +82,23 @@
 	    this.changesArray = [];
 	    this.postUpdate = this.performChanges; 
 	}
+
+	LayoutArea.prototype.onAttached = function(obj) {
+		if(!obj.events || !obj.events.onDestroy){
+			return;
+		}
+		obj.layoutAreaDestroy = function(){
+			this.unattach(obj);
+		}.bind(this);
+		obj.events.onDestroy.add(obj.layoutAreaDestroy);
+	};
+
+	LayoutArea.prototype.onUnattached = function(obj) {
+		if(!obj.events || !obj.events.onDestroy){
+			return;
+		};
+		obj.events.onDestroy.remove(obj.layoutAreaDestroy);
+	};
 
 	LayoutArea.prototype.performChanges = function(){
     	if(this.isUpdate > 0){

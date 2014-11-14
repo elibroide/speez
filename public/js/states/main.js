@@ -108,15 +108,16 @@ var mainState = (function(){
 				boards: [
 					{ color: colors[0] },
 					{ color: colors[1] },
-					// { color: colors[2] },
-					// { color: colors[3] },
+					{ color: colors[2] },
+					{ color: colors[3] },
 				],
-				cardCount: 5,
+				cardCount: 6,
 			}
 		}
 		player.game.hand.push(1);
 		player.game.hand.push(_.random(0,9));
-		player.game.hand.push(1);
+		player.game.hand.push(_.random(0,9));
+		player.game.hand.push(_.random(0,9));
 		player.game.hand.push(1);
 		player.game.hand.push(_.random(0,9));
 		// set test
@@ -130,7 +131,7 @@ var mainState = (function(){
 	function handleTestingStageClicked(){
 		stage = {
 			game: {
-				boardCount: 2,
+				boardCount: 4,
 				boards: [],
 			}
 		}
@@ -189,6 +190,7 @@ var mainState = (function(){
 			id: data.id,
 			name: data.name,
 		}
+		socket.on('speed:player:leave', handleLeave);
 		btnLeave.events.onInputDown.addOnce(handleLeaveClicked);
 		isReady = false;
 		toggleLobby(true);
@@ -196,6 +198,7 @@ var mainState = (function(){
 
 	function handleLeave(data){
 		console.log('handleLeave:', data);
+		socket.off('speed:player:leave', handleLoad);
 		textStatus.setText('Declined: ' + data.reason);
 		toggleButtons(true);
 		toggleLobby(false);
@@ -214,11 +217,6 @@ var mainState = (function(){
 		console.log('handleName:', data);
 		player.name = data.name;
 		textStatus.setText(data.name);
-	}
-
-	function handleNotify(data){
-		console.log('handleNotify:', data);
-		
 	}
 
 	// debug 
@@ -262,7 +260,6 @@ var mainState = (function(){
 			drawGui();
 
 			socket.on('speed:player:load', handleLoad);
-			socket.on('speed:player:notify', handleNotify);
 
 			debugLatency();
 
@@ -279,6 +276,7 @@ var mainState = (function(){
 		},
 
 		shutdown: function(){
+			socket.off('speed:player:leave', handleLeave);
 			socket.off('speed:player:load', handleLoad);
 		},
 

@@ -43,6 +43,10 @@ var stageFinishState = (function(){
 		drawGui();
 	}
 
+	function handleLeave(data){
+		delete stage.players[data.id];
+	}
+
 	return {
 		preload: function(){
 			layout = new Layout({
@@ -63,10 +67,12 @@ var stageFinishState = (function(){
 			}
 
 			socket.on('speed:stage:next', handleNext);
+			socket.on('speed:stage:leave', handleLeave);
 			socket.emit('speed:stage:next');
 		},
 
 		shutdown: function(){
+			socket.off('speed:stage:leave', handleLeave);
 			socket.off('speed:stage:next', handleNext);
 		}
 	}

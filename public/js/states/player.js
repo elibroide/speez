@@ -103,6 +103,7 @@ var playerState = (function(){
 	}
 
 	function handleCardPickedUp(card){
+		Audio.instance.play('fx', 'card/pickup');
 		_.each(hand, function(cardInHand){
 			if(!cardInHand || cardInHand === card || !cardInHand.faceup){
 				return;
@@ -119,11 +120,14 @@ var playerState = (function(){
 		if(card.thresholdHit !== Card.THRESHOLD_NONE){
 			holdCard(card);
 			placeCardBoard(card, card.thresholdHit)
+			Audio.instance.play('fx', 'card/placeBoard');
 		} else if(card.overlap !== null && hand[card.overlap] && compareCards(card.card, hand[card.overlap].card) && hand[card.overlap].faceup){
 			holdCard(card);
 			placeCardOverlap(card, card.overlap);
+			Audio.instance.play('fx', 'card/placeOverlap');
 		} else {
 			card.returnCard();
+			Audio.instance.play('fx', 'card/return');
 		}
 	}
 
@@ -204,6 +208,8 @@ var playerState = (function(){
 			timeline.to(hand[1], speezTime, { x: -distance, y: '+=' + getHeight * 1, ease: Back.easeOut  }, 0);
 			timeline.to(hand[3], speezTime, { x: distance, y: '-=' + getHeight * 1, ease: Back.easeOut  }, 0);
 			timeline.to(hand[4], speezTime, { x: distance * 2, y: '-=' + getHeight * 2, ease: Back.easeOut  }, 0);
+			timeline.add(_.invoke(hand, 'playWinner'), null, null, 0.05);
+			timeline.add(_.invoke(hand, 'playWinner').reverse(), '-=' + 0.01, null, 0.05);
 			timeline.to(boards, speezTime, { alpha: 0 }, 0);
 			var texts = _.pluck(hand, 'text');
 			timeline.to(_.pluck(texts, 'scale'), speezTime, { x: 1, y: 1 }, 0);
@@ -234,6 +240,7 @@ var playerState = (function(){
 		_.invoke(boards, 'cancelProximity');
 		if(!data.confirm){
 			_.invoke(hand, 'reject')
+			Audio.instance.play('fx', 'card/reject');
 			return;
 		}
 		// Destroy old card
@@ -252,6 +259,7 @@ var playerState = (function(){
 		}
 		hand[data.overlapId].reject();
 		header.setText(getHeaderText());
+		Audio.instance.play('fx', 'card/overlapSuccess');
 	}
 
 	function handleCardBoard(data){
@@ -260,15 +268,25 @@ var playerState = (function(){
 		_.invoke(boards, 'cancelProximity');
 		if(!data.confirm){
 			// reject
-			debugger;
 			_.invoke(hand, 'reject')
 			var timeline = new TimelineLite();
 			var color = boards[data.boardId].options.color;
 			var isLeft = data.boardId % 2 === 0;
-			timeline.add(_.invoke(hand, 'shake', isLeft, color), null, null, 0.05);
+			timeline.add(hand[data.handId].shake(isLeft, color));
+			timeline.add(hand[data.handId].shake(isLeft, color), '-=' + hand[data.handId].options.shakeTime * 0.75);
+			timeline.add(hand[data.handId].shake(isLeft, color), '-=' + hand[data.handId].options.shakeTime * 0.75);
+			// timeline.add(_.invoke(hand, 'shake', isLeft, color), null, null, 0.05);
 			// timeline.add(_.invoke(hand, 'shake'), '-=0.75', null, 0.05);
+			Audio.instance.play('fx', 'card/boardFailed');
 			return;
 		}
+		// Destroy old card
+		var oldCard = hand[data.handId];
+		oldCard.enable(false);
+		_.delay(function(){
+			oldCard.destroy();
+		}, oldCard.options.placeCardTime * 1000);
+		// create new card
 		player.game.cardCount--;
 		var isEmpty = player.game.cardCount < 5;
 		var newCard = drawCard(data.newCard, data.handId, false, isEmpty);
@@ -277,6 +295,7 @@ var playerState = (function(){
 			newCard.enable(false);
 		}
 		header.setText(getHeaderText());
+		Audio.instance.play('fx', 'card/boardSuccess');
 	}
 
 	function handleAchievement(data){
@@ -285,8 +304,25 @@ var playerState = (function(){
 		if(!achievment){
 			return;
 		}
+		if(achievment.sound){
+			Audio.instance.play('fx', achievment.sound);
+		}
 		var color = achievment.isGood ? 0x00aa00 : 0xaa0000;
 		header.tweenTitleDelay(achievment.text, color, 0.1, 5);
+	}
+
+	function handleLeave(data){
+		console.log('handleLeave:', data);
+		delete player;
+		Audio.instance.stop('fx');
+		TweenMax.killAll();
+		var timeline = new TimelineLite();
+		timeline.to(_.flatten([hand, boards, container, header]), 1, {alpha: 0});
+		timeline.add(common.tweenStageColor(0x000000, function(){
+			setTimeout(function(){ 
+				game.state.start('main'); 
+			}, 500);
+		}));
 	}
 
 	// other
@@ -296,17 +332,17 @@ var playerState = (function(){
 			case 'screwed':
 				return { text: 'Blocked by ' + data.name, isGood: false };
 			case 'screw':
-				return { text: 'You blocked ' + data.name, isGood: true };
+				return { text: 'You blocked ' + data.name, isGood: true, sound: 'achievement/screw' };
 			case 'firstOfGame':
 				return { text: 'First card', isGood: true };
 			case 'streak':
-				return { text: 'You are ' + getStreakName(data.level), isGood: true };
+				return { text: 'You are ' + getStreakName(data.level), isGood: true, sound: 'achievement/streak' + data.level };
 			// case 'streakBroke':
 			// 	return { text: data.name + ' stopped your streak', isGood: false };
-			case 'streakBreak':
-				return { text: 'You stopped ' + data.name + '\'s streak', isGood: true };
+			// case 'streakBreak':
+			// 	return { text: 'You stopped ' + data.name + '\'s streak', isGood: true };
 			case 'last':
-				return { text: data.count + ' card' + (data.count === 1 ? '' : 's') + ' left', isGood: true };
+				return { text: data.count + ' card' + (data.count === 1 ? '' : 's') + ' left', isGood: true, sound: 'achievement/last' + data.count };
 			case 'test':
 				return { text: 'I am testing this thing', isGood: data.isGood };
 		}
@@ -333,6 +369,7 @@ var playerState = (function(){
 			boardWidthRight - boardWidth, cardHeight, {
 				colors: colors,
 				waitCard: isEmpty ? 'speez'[index] : '+',
+				textColor: isEmpty ? 0x222222 : 0xeeeeee,
 				isNew: isNew,
 				card: card,
 				dragStartCallback: handleCardPickedUp,
@@ -389,10 +426,14 @@ var playerState = (function(){
 
 	function testCardPutBoard(data){
 		var boardId = data.boardId;
+		var returnData = _.pick(data, ['boardId', 'handId']);
 		if(boardId % 2 === 0){
 			var newCard = _.random(0, 9);
+			if(player.game.cardCount === 2){
+				handleAchievement({ achievement: 'last', data: { count: 1 } });
+			}
 			if(boardId === 0){
-				handleCardBoard({ confirm: true, handId: data.handId, newCard: newCard });
+				handleCardBoard(_.extend({ confirm: true, newCard: newCard }, returnData));
 				if(player.game.cardCount === 0){
 					setTimeout(function(){
 						handleWinner({winner: true});
@@ -400,7 +441,7 @@ var playerState = (function(){
 				}
 			} else {
 				setTimeout(function(){ 
-					handleCardBoard({ confirm: true, handId: data.handId, newCard: newCard });
+					handleCardBoard(_.extend({ confirm: true, newCard: newCard }, returnData));
 					if(player.game.cardCount === 0){
 						setTimeout(function(){
 							handleWinner({winner: false});
@@ -412,10 +453,10 @@ var playerState = (function(){
 		}
 		if(boardId === 3){
 			setTimeout(function(){
-				handleCardBoard({ confirm: false });
+				handleCardBoard(_.extend({ confirm: false }, returnData));
 			}, 1000);
 		} else {
-			handleCardBoard({ confirm: false });
+			handleCardBoard(_.extend({ confirm: false }, returnData));
 		}
 	}
 
@@ -436,6 +477,7 @@ var playerState = (function(){
 			lastCards = 5;
 			common.tweenStageColor(0x333333, handleStageReady);
 
+			socket.on('speed:player:leave', handleLeave);
 			socket.on('speed:player:start', handleStart);
 			socket.on('speed:player:winner', handleWinner);
 			socket.on('speed:player:achieve', handleAchievement);
@@ -445,6 +487,7 @@ var playerState = (function(){
 		},
 
 		shutdown: function(){
+			socket.off('speed:player:leave', handleLeave);
 			socket.off('speed:player:start', handleStart);
 			socket.off('speed:player:achieve', handleAchievement);
 			socket.off('speed:player:winner', handleWinner);

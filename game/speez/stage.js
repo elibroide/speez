@@ -35,11 +35,12 @@ Stage.prototype.__proto__ = events.EventEmitter.prototype;
 // Constants
 
 Object.defineProperty(Stage, "CARD_PUT_TIMEOUT", { value: 1000 });
-Object.defineProperty(Stage, "MAX_PLAYERS", { value: 4 });
+Object.defineProperty(Stage, "MAX_PLAYERS", { value: 5 });
 
 Object.defineProperty(Stage, "STATE_LOBBY", { value: 'lobby' });
 Object.defineProperty(Stage, "STATE_PLAY", { value: 'play' });
 Object.defineProperty(Stage, "STATE_SPEEDY", { value: 'speedy' });
+Object.defineProperty(Stage, "STATE_FINISH", { value: 'finish' });
 
 Object.defineProperty(Stage, "LEAVE_DISCONNECT", { value: 300 });
 Object.defineProperty(Stage, "LEAVE_USER_CHOICE", { value: 301 });
@@ -101,6 +102,10 @@ Stage.prototype.getName = function(previousName) {
 
 Stage.prototype.leave = function(player) {
 	delete this.players[player.id];
+	if(this.countPlayer()){
+		return;
+	}
+	this.state = Stage.STATE_LOBBY;
 };
 
 Stage.prototype.setReady = function(player, isReady) {
@@ -227,9 +232,10 @@ Stage.prototype.saveLastPlay = function() {
 	this.history.push(play);
 };
 
-Stage.prototype.playCardOverlap = function(player, oldCard, oldOverlapCard, newCard, newOverlapCard) {
-	this.emit(Stage.EVENT_CARD_OVERLAP, player, oldCard, oldOverlapCard, newCard, newOverlapCard);
-	this.history.push({ action: Stage.ACTION_CARD_OVERLAP, player: player.id, oldCard: oldCard, oldOverlapCard: oldOverlapCard, newCard: newCard, newOverlapCard: newOverlapCard });
+Stage.prototype.playCardOverlap = function(player, card, overlapCard) {
+	this.emit(Stage.EVENT_CARD_OVERLAP, player, card, overlapCard);
+	this.history.push({ action: Stage.ACTION_CARD_OVERLAP, player: player.id, card: card, overlapCard: overlapCard });
+	return true;
 };
 
 Stage.prototype.randomizeBoards = function() {
@@ -263,11 +269,18 @@ Stage.prototype.isWin = function() {
 	this.winner = this.findPlayer(function(player){
 		return player.isWin();
 	});
+	if(this.winner){
+		this.state = Stage.STATE_FINISH;
+	}
 	return this.winner;
 };
 
 Stage.prototype.checkCardProximity = function(card1, card2) {
 	return (card2 + 10 - 1) % 10 === card1 || (card2 + 10 + 1) % 10 === card1
+};
+
+Stage.prototype.countPlayer = function() {
+	return _.keys(this.players).length;
 };
 
 Stage.prototype.eachPlayer = function(func, isRandom) {
@@ -346,7 +359,7 @@ Stage.prototype.checkStreakSpeedy = function() {
 Stage.prototype.checkStreak = function(player) {
 	// Increment this player streak count
 	if(this.currentStreak && this.currentStreak.player.id !== player.id){
-		this.currentStreak = null;
+		this.currentStreak.player.streakCount = 0;
 	}
 	player.streakCount++;
 	// Check count

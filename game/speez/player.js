@@ -55,6 +55,9 @@ Player.prototype.playOverlap = function(handId, overlapId) {
 	if(this.hand[handId] !== this.hand[overlapId]){
 		return false;
 	}
+	if(!this.stage.playCardOverlap(this, this.hand[handId], this.hand[overlapId])){
+		return false;
+	}
 	// Set overlap card
 	var oldOverlapCard = this.hand[overlapId];
 	var newOverlapCard = this.hand[overlapId];
@@ -67,7 +70,6 @@ Player.prototype.playOverlap = function(handId, overlapId) {
 		this.hand[handId] = undefined;
 	}
 	var newCard = this.hand[handId];
-	this.stage.playCardOverlap(this, oldCard, oldOverlapCard, newCard, newOverlapCard);
 	this.hand[handId] = newCard;
 	return { newCard: this.hand[handId], newOverlapCard: newOverlapCard };
 };
