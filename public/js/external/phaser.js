@@ -8333,6 +8333,14 @@ PIXI.CanvasGraphics.renderGraphics = function(graphics, context)
 
         context.lineWidth = data.lineWidth;
 
+        if(data.lineDash){
+            var lineDash = data.lineDash;
+            if(Object.prototype.toString.call(lineDash) !== '[object Array]'){
+                lineDash = [ lineDash ];
+            }
+            context.setLineDash(lineDash);
+        }
+
         if(data.type === PIXI.Graphics.POLY)
         {
             context.beginPath();
@@ -8756,16 +8764,18 @@ Object.defineProperty(PIXI.Graphics.prototype, "cacheAsBitmap", {
  * @param lineWidth {Number} width of the line to draw, will update the object's stored style
  * @param color {Number} color of the line to draw, will update the object's stored style
  * @param alpha {Number} alpha of the line to draw, will update the object's stored style
+ * @param lineDash {Array|Number} an array of line dash
  */
-PIXI.Graphics.prototype.lineStyle = function(lineWidth, color, alpha)
+PIXI.Graphics.prototype.lineStyle = function(lineWidth, color, alpha, lineDash)
 {
     if (!this.currentPath.points.length) this.graphicsData.pop();
 
     this.lineWidth = lineWidth || 0;
     this.lineColor = color || 0;
     this.lineAlpha = (arguments.length < 3) ? 1 : alpha;
+    this.lineDash = lineDash;
 
-    this.currentPath = {lineWidth:this.lineWidth, lineColor:this.lineColor, lineAlpha:this.lineAlpha,
+    this.currentPath = {lineWidth:this.lineWidth, lineColor:this.lineColor, lineAlpha:this.lineAlpha, lineDash: this.lineDash,
                         fillColor:this.fillColor, fillAlpha:this.fillAlpha, fill:this.filling, points:[], type:PIXI.Graphics.POLY};
 
     this.graphicsData.push(this.currentPath);
@@ -8784,7 +8794,7 @@ PIXI.Graphics.prototype.moveTo = function(x, y)
 {
     if (!this.currentPath.points.length) this.graphicsData.pop();
 
-    this.currentPath = this.currentPath = {lineWidth:this.lineWidth, lineColor:this.lineColor, lineAlpha:this.lineAlpha,
+    this.currentPath = {lineWidth:this.lineWidth, lineColor:this.lineColor, lineAlpha:this.lineAlpha, lineDash: this.lineDash,
                         fillColor:this.fillColor, fillAlpha:this.fillAlpha, fill:this.filling, points:[], type:PIXI.Graphics.POLY};
 
     this.currentPath.points.push(x, y);
@@ -9046,7 +9056,7 @@ PIXI.Graphics.prototype.drawPath = function(path)
 {
     if (!this.currentPath.points.length) this.graphicsData.pop();
 
-    this.currentPath = {lineWidth:this.lineWidth, lineColor:this.lineColor, lineAlpha:this.lineAlpha,
+    this.currentPath = {lineWidth:this.lineWidth, lineColor:this.lineColor, lineAlpha:this.lineAlpha, lineDash: this.lineDash,
                         fillColor:this.fillColor, fillAlpha:this.fillAlpha, fill:this.filling, points:[], type:PIXI.Graphics.POLY};
 
     this.graphicsData.push(this.currentPath);
@@ -9102,7 +9112,7 @@ PIXI.Graphics.prototype.drawRect = function( x, y, width, height )
     if (!this.currentPath.points.length) this.graphicsData.pop();
 
     this.currentPath = {lineWidth:this.lineWidth, lineColor:this.lineColor, lineAlpha:this.lineAlpha,
-                        fillColor:this.fillColor, fillAlpha:this.fillAlpha, fill:this.filling,
+                        fillColor:this.fillColor, fillAlpha:this.fillAlpha, fill:this.filling, lineDash: this.lineDash,
                         points:[x, y, width, height], type:PIXI.Graphics.RECT};
 
     this.graphicsData.push(this.currentPath);
@@ -9125,7 +9135,7 @@ PIXI.Graphics.prototype.drawRoundedRect = function( x, y, width, height, radius 
     if (!this.currentPath.points.length) this.graphicsData.pop();
 
     this.currentPath = {lineWidth:this.lineWidth, lineColor:this.lineColor, lineAlpha:this.lineAlpha,
-                        fillColor:this.fillColor, fillAlpha:this.fillAlpha, fill:this.filling,
+                        fillColor:this.fillColor, fillAlpha:this.fillAlpha, fill:this.filling, lineDash: this.lineDash,
                         points:[x, y, width, height, radius], type:PIXI.Graphics.RREC};
 
     this.graphicsData.push(this.currentPath);
@@ -9147,7 +9157,7 @@ PIXI.Graphics.prototype.drawCircle = function(x, y, radius)
 
     if (!this.currentPath.points.length) this.graphicsData.pop();
 
-    this.currentPath = {lineWidth:this.lineWidth, lineColor:this.lineColor, lineAlpha:this.lineAlpha,
+    this.currentPath = {lineWidth:this.lineWidth, lineColor:this.lineColor, lineAlpha:this.lineAlpha, lineDash: this.lineDash,
                         fillColor:this.fillColor, fillAlpha:this.fillAlpha, fill:this.filling,
                         points:[x, y, radius, radius], type:PIXI.Graphics.CIRC};
 
@@ -9171,7 +9181,7 @@ PIXI.Graphics.prototype.drawEllipse = function(x, y, width, height)
 
     if (!this.currentPath.points.length) this.graphicsData.pop();
 
-    this.currentPath = {lineWidth:this.lineWidth, lineColor:this.lineColor, lineAlpha:this.lineAlpha,
+    this.currentPath = {lineWidth:this.lineWidth, lineColor:this.lineColor, lineAlpha:this.lineAlpha, lineDash: this.lineDash,
                         fillColor:this.fillColor, fillAlpha:this.fillAlpha, fill:this.filling,
                         points:[x, y, width, height], type:PIXI.Graphics.ELIP};
 
@@ -58175,14 +58185,14 @@ Phaser.Particles.Arcade.Emitter.prototype.emitParticle = function () {
         particle.scale.set(this.game.rnd.realInRange(this._minParticleScale.x, this._maxParticleScale.x), this.game.rnd.realInRange(this._minParticleScale.y, this._maxParticleScale.y));
     }
 
-    if (Array.isArray(this._frames === 'object'))
-    {
-        particle.frame = this.game.rnd.pick(this._frames);
-    }
-    else
-    {
-        particle.frame = this._frames;
-    }
+    // if (Array.isArray(this._frames === 'object'))
+    // {
+    //     particle.frame = this.game.rnd.pick(this._frames);
+    // }
+    // else
+    // {
+    //     particle.frame = this._frames;
+    // }
 
     if (this.autoAlpha)
     {

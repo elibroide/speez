@@ -114,6 +114,8 @@ var moduel = (function(window){
 		this.scaleY = height / this.originalHeight;
 		this.scaleY = Math.min(this.maxScaleY, this.scaleY);
 		this.scaleY = Math.max(this.minScaleY, this.scaleY);
+		this.minScale = Math.min(this.scaleX, this.scaleY);
+		this.maxScale = Math.max(this.scaleX, this.scaleY);
 		if(this.scaling){
 			this.scaling(this.scaleX, this.scaleY);
 		}

@@ -14,12 +14,13 @@ com.speez.components.Header = (function(){
 			text: '',
 			format: {
 		        font: "50px Arial",
-		        fill: "#000000",
-		        align: "center"
+		        align: "center",
 		    },
+		    textColor: 0xffffff,
 		    color: 0xffffff,
 		}, options);
 		this.options = options;
+		this.options.format.fill = '#' + common.toRgbHex(options.textColor);
 
 	    Phaser.Sprite.call(this, game, 0, 0);
 

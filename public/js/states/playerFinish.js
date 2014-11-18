@@ -72,7 +72,7 @@ var playerFinishState = (function(){
 
 	function handleLoad(data){
 		player.game = data;
-
+		player.game.cardTotal = player.game.cardCount;
 		var timeline = new TimelineLite();
 		timeline.add(common.tweenStageColor(0xffffff, function(){
 			setTimeout(function(){ game.state.start('player'); }, 500);

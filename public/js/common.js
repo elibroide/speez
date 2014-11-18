@@ -141,8 +141,24 @@ var common = {
 	},
 
 	rgba: function(r, g, b, a){
-		console.log(r, g, b, a);
 		return (a << 24) + (r << 16) + (g << 8) + (b);
+	},
+
+	toRgb: function(color){
+		return 'rgb(' + [(color & 0xff0000) >> 16, (color & 0x00ff00) >> 8, color & 0x0000ff].join(',') + ')';
+	},
+
+	toRgbHex: function(color, prefix){
+		if(prefix === undefined){
+			prefix = '';
+		}
+		var r = ((color & 0xff0000) >> 16).toString(16);
+		var g = ((color & 0x00ff00) >> 8).toString(16);
+		var b = (color & 0x0000ff).toString(16);
+		r += r.length === 1 ? '0' : '';
+		g += g.length === 1 ? '0' : '';
+		b += b.length === 1 ? '0' : '';
+		return prefix + r + g + b;
 	},
 
 	textColorChange: function(){
@@ -151,6 +167,16 @@ var common = {
 				this.fill = '#' + common.getRgb(color).toString(16);
 			}
 			return this.fill;
+		}
+	},
+
+	graphicsColorChange: function(i){
+		return function(color){
+			if(color !== undefined){
+				this.color = common.getRgb(color);
+				this.graphicsData[i].fillColor = this.color;
+			}
+			return this.graphicsData[i].fillColor;
 		}
 	},
 

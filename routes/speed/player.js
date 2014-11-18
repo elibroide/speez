@@ -92,6 +92,7 @@ module.exports.messages = {
 		});
 
 		// loading each player
+		req.stage.setCards();
 		_.each(_.keys(req.stage.players), function(key){
 			// setting player load data
 			var player = req.stage.players[key];
@@ -122,12 +123,12 @@ module.exports.messages = {
 
 	cardBoard: function(req){
 		var data = req.player.playCardBoard(req.data.handId, req.data.boardId);
-		var returnData = _.pick(req.data, ['handId', 'boardId']);
-		if(!data){
-			req.io.respond(_.extend({ confirm: false }, returnData))
+		data = _.extend(data, { handId: req.data.handId, boardId: req.data.boardId })
+		if(!data.confirm){
+			req.io.respond(data)
 			return;
 		}
-		req.io.respond(_.extend({ confirm: true, newCard: data.newCard, streakCount: req.player.streakCount }, returnData));
+		req.io.respond(data);
 		var win = req.stage.isWin();
 		req.stage.socket.emit('speed:stage:card', { boardId: req.data.boardId, card: data.card, playerId: req.player.id });
 		if(win){
@@ -144,16 +145,8 @@ module.exports.messages = {
 
 	cardOverlap: function(req) {
 		var data = req.player.playOverlap(req.data.handId, req.data.overlapId);
-		if(data === false){
-			req.io.respond({ confirm: false, handId: req.data.handId, overlapId: req.data.overlapId });
-			return;
-		}
-		req.io.respond({ confirm: true, 
-			handId: req.data.handId, 
-			overlapId: req.data.overlapId, 
-			newCard: data.newCard, 
-			overlapNewCard: data.newOverlapCard 
-		});
+		data = _.extend(data, { handId: req.data.handId, overlapId: req.data.overlapId })
+		req.io.respond(data);
 	},
 
 	next: function(req){

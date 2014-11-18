@@ -34,10 +34,11 @@ Player.prototype.getCard = function(handId) {
 Player.prototype.playCardBoard = function(handId, boardId) {
 	var card = this.hand[handId];
 	if(card === undefined){
-		return false;
+		return { confirm: false, reason: 'no such card' };
 	}
-	if(!this.stage.playCardBoard(this, card, boardId)){
-		return false;
+	var response = this.stage.playCardBoard(this, card, boardId);
+	if(!response.confirm){
+		return response;
 	}
 	this.cardCount--;
 	if(this.cardCount >= Player.HAND_SIZE){
@@ -45,18 +46,19 @@ Player.prototype.playCardBoard = function(handId, boardId) {
 	} else {
 		this.hand[handId] = undefined;
 	}
-	return { card: card, newCard: this.hand[handId] };
+	return _.extend({ card: card, newCard: this.hand[handId] }, response);
 };
 
 Player.prototype.playOverlap = function(handId, overlapId) {
 	if(this.hand[handId] === undefined || this.hand[overlapId] === undefined){
-		return false;
+		return { confirm: false, reason: 'no such card' };
 	}
 	if(this.hand[handId] !== this.hand[overlapId]){
-		return false;
+		return { confirm: false, reason: 'cards not equal' };
 	}
-	if(!this.stage.playCardOverlap(this, this.hand[handId], this.hand[overlapId])){
-		return false;
+	var response = this.stage.playCardOverlap(this, this.hand[handId], this.hand[overlapId]);
+	if(!response.confirm){
+		return response;
 	}
 	// Set overlap card
 	var oldOverlapCard = this.hand[overlapId];
@@ -71,11 +73,11 @@ Player.prototype.playOverlap = function(handId, overlapId) {
 	}
 	var newCard = this.hand[handId];
 	this.hand[handId] = newCard;
-	return { newCard: this.hand[handId], newOverlapCard: newOverlapCard };
+	return _.extend({ newCard: this.hand[handId], newOverlapCard: newOverlapCard }, response);
 };
 
 Player.prototype.makeCard = function() {
-	return _.random(0, 9);
+	return this.stage.getCard();
 };
 
 Player.prototype.isWin = function() {

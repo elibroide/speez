@@ -1,0 +1,62 @@
+// _custom.scss
+
+// Mixins
+
+@mixin vertical-align($percentage) {
+  position: relative;
+  top: $percentage;
+  -webkit-transform: translateY(-$percentage);
+  -ms-transform: translateY(-$percentage);
+  transform: translateY(-$percentage);
+}
+
+@mixin padding($top, $left, $down, $right) {
+	padding: $top + px $left + px $down + px $right + px;
+}
+
+.button {
+	&.big {
+		height: 70px;
+		font-size: rem-calc(30);
+	}
+
+	&:hover {  
+		color: $button-bg-color;
+	}
+}
+
+.header {
+	color: $primary-color;
+}
+
+.vertical-centered {
+	@include vertical-align(50%);
+}
+
+.row {
+	&.primary {
+		@include vertical-align(30%);
+	}
+
+	&.secondary {
+		@include vertical-align(70%);
+		@include padding(80, 0, 0, 0);
+	}
+}
+
+input[type="tel"] {
+	height: 70px;
+	&.big {
+		height: 70px;
+		font-size: rem-calc(30);
+	}
+}
+
+body {
+	background-color: $black !important;
+}
+
+
+
+
+

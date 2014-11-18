@@ -6,34 +6,40 @@ var playerState = (function(){
 	var lastCards;
 
 	// gui
+	var footer;
+	var fullScreen;
 	var header;
 	var boards;
 	var hand;
 	var colors;
 	var playerArea;
-	var hand;
 	var container;
 
 	var headerHeight;
 	var gameHeight;
+	var barHeight;
 	var boardMiddle;
 	var boardWidth;
 	var boardWidthCenter;
 	var boardWidthRight;
 	var cardHeight;
 
+	var nextCard;
 	var overlapCard;
+	var sightedCards;
 
 	function drawGui(){
 		// sizes
 		headerHeight = originalHeight * 0.125;
-		gameHeight = originalHeight - headerHeight;
+		barHeight = 50;
+		gameHeight = originalHeight - headerHeight - barHeight;
 		gameHeightCenter = gameHeight / 2;
 		boardMiddle = gameHeightCenter + headerHeight;
 		boardWidth = 150;
 		boardWidthCenter = boardWidth * 0.5;
 		boardWidthRight = originalWidth - boardWidth;
 		cardHeight = gameHeight / 5;
+		cardWidth = originalWidth - boardWidth * 2;
 
 		boards = [];
 		colors = [];
@@ -42,30 +48,37 @@ var playerState = (function(){
 		};
 		switch(player.game.boards.length) {
 			case 2:
-				boards[0] = new com.speez.components.Board(0, headerHeight, boardWidth, gameHeight, colors[0]);
-				boards[1] = new com.speez.components.Board(boardWidthRight, headerHeight, boardWidth, gameHeight, colors[1]);
+				boards[0] = new com.speez.components.PlayerBoard(0, headerHeight, boardWidth, gameHeight, colors[0]);
+				boards[1] = new com.speez.components.PlayerBoard(boardWidthRight, headerHeight, boardWidth, gameHeight, colors[1]);
 				// colors
 				colors[2] = colors[0];
 				colors[3] = colors[1];
 				break;
 			case 3:
-				boards[0] = new com.speez.components.Board(0, headerHeight, boardWidth, gameHeightCenter, colors[0]);
-				boards[1] = new com.speez.components.Board(boardWidthRight, headerHeight, boardWidth, gameHeight, colors[1]);
-				boards[2] = new com.speez.components.Board(0, boardMiddle, boardWidth, gameHeightCenter, colors[2])
+				boards[0] = new com.speez.components.PlayerBoard(0, headerHeight, boardWidth, gameHeightCenter, colors[0]);
+				boards[1] = new com.speez.components.PlayerBoard(boardWidthRight, headerHeight, boardWidth, gameHeight, colors[1]);
+				boards[2] = new com.speez.components.PlayerBoard(0, boardMiddle, boardWidth, gameHeightCenter, colors[2])
 				// colors
 				colors[3] = colors[1];
 				break;
 			case 4:
-				boards[0] = new com.speez.components.Board(0, headerHeight, boardWidth, gameHeightCenter, colors[0]);
-				boards[1] = new com.speez.components.Board(boardWidthRight, headerHeight, boardWidth, gameHeightCenter, colors[1]);
-				boards[2] = new com.speez.components.Board(0, boardMiddle, boardWidth, gameHeightCenter, colors[2]);
-				boards[3] = new com.speez.components.Board(boardWidthRight, boardMiddle, boardWidth, gameHeightCenter, colors[3]);
+				boards[0] = new com.speez.components.PlayerBoard(0, headerHeight, boardWidth, gameHeightCenter, colors[0]);
+				boards[1] = new com.speez.components.PlayerBoard(boardWidthRight, headerHeight, boardWidth, gameHeightCenter, colors[1]);
+				boards[2] = new com.speez.components.PlayerBoard(0, boardMiddle, boardWidth, gameHeightCenter, colors[2]);
+				boards[3] = new com.speez.components.PlayerBoard(boardWidthRight, boardMiddle, boardWidth, gameHeightCenter, colors[3]);
 				break;
 		}
 
+		// Content
+		playerArea = new com.LayoutArea(boardWidth, headerHeight, cardWidth, gameHeight, { isDebug: false });
+		container = game.add.sprite();
+		playerArea.attach(container, { width: cardWidth, height: gameHeight });
+
 		hand = [];
 		for(var i = 0; i < 5; i++){
-			var card = drawCard(player.game.hand[i], i, true);
+			var index = i % 5;
+			var card = drawCard(player.game.hand[index], index, true, i > player.game.cardCount);
+			hand[index] = card;
 		}
 
 		// animation start
@@ -77,18 +90,19 @@ var playerState = (function(){
 			timeline.timeScale(9);
 		}
 
-		// Content
-		playerArea = new com.LayoutArea(0, 0, originalWidth, originalHeight, { isDebug: false });
-		container = game.add.sprite();
-		playerArea.attach(container, { width: originalWidth, height: originalHeight });
-
 		// header
 		header = new com.speez.components.Header(originalWidth, headerHeight, {
 			text: getHeaderText(),
-			color: 0xffffff,
+			color: 0x1E1E1E,
 		});
 		header.alpha = 0;
-		TweenLite.to(header, 1, {alpha: 1})
+		TweenLite.to(header, 1, {alpha: 1});
+
+		// footer
+		var barHeightGap = 10;
+		footer = new com.speez.components.PlayerCardBar(0, originalHeight - (barHeight - barHeightGap), originalWidth, barHeight - barHeightGap);
+
+	 	fullScreen = new com.speez.components.PlayerFullScreen(0, 0, originalWidth, originalHeight);
 	}
 
 	// handle gui
@@ -104,6 +118,8 @@ var playerState = (function(){
 
 	function handleCardPickedUp(card){
 		Audio.instance.play('fx', 'card/pickup');
+		_.invoke(boards, 'setArrow');
+		sightedCards = [];
 		_.each(hand, function(cardInHand){
 			if(!cardInHand || cardInHand === card || !cardInHand.faceup){
 				return;
@@ -111,28 +127,32 @@ var playerState = (function(){
 			if(compareCards(cardInHand.card, card.card)){
 				// card.setOverlapSighted();
 				cardInHand.setOverlapSighted();
+				sightedCards.push(cardInHand);
 			}
 		});
+		// create a beneath card
+		nextCard = drawCard(null, card.index, false, player.game.cardCount <= 5);
 	}
 
 	function handleCardPutDown(card){
+		_.invoke(boards, 'cancelArrow');
 		overlapCard = null;
+		_.each(sightedCards, function(sightedCard){
+			sightedCard.cancelOverlapSighted();
+		});
 		if(card.thresholdHit !== Card.THRESHOLD_NONE){
-			holdCard(card);
+			_.invoke(hand, 'enable', false);
 			placeCardBoard(card, card.thresholdHit)
 			Audio.instance.play('fx', 'card/placeBoard');
 		} else if(card.overlap !== null && hand[card.overlap] && compareCards(card.card, hand[card.overlap].card) && hand[card.overlap].faceup){
-			holdCard(card);
+			_.invoke(hand, 'enable', false);
 			placeCardOverlap(card, card.overlap);
 			Audio.instance.play('fx', 'card/placeOverlap');
 		} else {
 			card.returnCard();
+			destroyNext();
 			Audio.instance.play('fx', 'card/return');
 		}
-	}
-
-	function holdCard(card){
-		_.invoke(hand, 'enable', false);
 	}
 
 	function placeCardBoard(card, thresholdId){
@@ -166,22 +186,27 @@ var playerState = (function(){
 		}
 		var targetCard = hand[overlap];
 		if(!targetCard || !targetCard.faceup || !compareCards(targetCard.card, card.card)){
+			_.invoke(boards, 'setArrow');
 			return;
 		}
 		overlapCard = targetCard;
 		overlapCard.setOverlapped();
 		card.setOverlapping();
+		_.invoke(boards, 'cancelArrow');
 		_.invoke(boards, 'setProximity', false)
 	}
 
 	function handleCardProximity(card, threshold){
+		_.invoke(boards, 'cancelProximity');
 		if(threshold === undefined){
-			_.invoke(boards, 'cancelProximity');
+			_.invoke(boards, 'setArrow');
 			card.cancelProximity();
 		} else {
+			_.invoke(boards, 'cancelArrow');
 			_.invoke(boards, 'setProximity', false);
 			var board = boards[getBoard(threshold)];
 			board.setProximity(true);
+			board.setArrow();
 			card.setProximity(board.options.color);
 		}
 	}
@@ -204,10 +229,12 @@ var playerState = (function(){
 			var distance = 100;
 			var speezTime = 1;
 			var getHeight = hand[0].options.height * Layout.instance.scaleY;
-			timeline.to(hand[0], speezTime, { x: -distance * 2, y: '+=' + getHeight * 2, ease: Back.easeOut }, 0);
-			timeline.to(hand[1], speezTime, { x: -distance, y: '+=' + getHeight * 1, ease: Back.easeOut  }, 0);
-			timeline.to(hand[3], speezTime, { x: distance, y: '-=' + getHeight * 1, ease: Back.easeOut  }, 0);
-			timeline.to(hand[4], speezTime, { x: distance * 2, y: '-=' + getHeight * 2, ease: Back.easeOut  }, 0);
+			timeline.add(_.invoke(hand, 'playWinnerStart'), null, null, 0.05);
+			timeline.addLabel('start');
+			timeline.to(hand[0], speezTime, { x: -distance * 2, y: '+=' + getHeight * 2, ease: Back.easeOut }, 'start');
+			timeline.to(hand[1], speezTime, { x: -distance, y: '+=' + getHeight * 1, ease: Back.easeOut  }, 'start');
+			timeline.to(hand[3], speezTime, { x: distance, y: '-=' + getHeight * 1, ease: Back.easeOut  }, 'start');
+			timeline.to(hand[4], speezTime, { x: distance * 2, y: '-=' + getHeight * 2, ease: Back.easeOut  }, 'start');
 			timeline.add(_.invoke(hand, 'playWinner'), null, null, 0.05);
 			timeline.add(_.invoke(hand, 'playWinner').reverse(), '-=' + 0.01, null, 0.05);
 			timeline.to(boards, speezTime, { alpha: 0 }, 0);
@@ -239,35 +266,34 @@ var playerState = (function(){
 		_.invoke(hand, 'enable', true);
 		_.invoke(boards, 'cancelProximity');
 		if(!data.confirm){
+			destroyNext();
 			_.invoke(hand, 'reject')
 			Audio.instance.play('fx', 'card/reject');
 			return;
 		}
-		// Destroy old card
-		var oldCard = hand[data.handId];
-		oldCard.enable(false);
-		_.delay(function(){
-			oldCard.destroy();
-		}, oldCard.options.placeCardTime * 1000);
 		// create new card
+		destroyCard(hand[data.handId]);
+		hand[data.overlapId].overlapComplete();
 		player.game.cardCount--;
-		var isEmpty = player.game.cardCount < 5;
-		var newCard = drawCard(data.newCard, data.handId, false, isEmpty);
-		newCard.startCard();
-		if(isEmpty){
-			newCard.enable(false);
+		hand[data.handId] = nextCard;
+		nextCard.card = data.newCard;
+		var timeline = nextCard.startCard();
+		if(player.game.cardCount < 5){
+			nextCard.enable(false);
+		} else {
+			timeline.add(nextCard.appearCard())
 		}
-		hand[data.overlapId].reject();
-		header.setText(getHeaderText());
+		nextCard = null;
+		setFooter();
 		Audio.instance.play('fx', 'card/overlapSuccess');
 	}
 
 	function handleCardBoard(data){
 		console.log('handleCardBoard:', data);
-		_.invoke(hand, 'enable', true);
 		_.invoke(boards, 'cancelProximity');
 		if(!data.confirm){
 			// reject
+			destroyNext();
 			_.invoke(hand, 'reject')
 			var timeline = new TimelineLite();
 			var color = boards[data.boardId].options.color;
@@ -275,40 +301,65 @@ var playerState = (function(){
 			timeline.add(hand[data.handId].shake(isLeft, color));
 			timeline.add(hand[data.handId].shake(isLeft, color), '-=' + hand[data.handId].options.shakeTime * 0.75);
 			timeline.add(hand[data.handId].shake(isLeft, color), '-=' + hand[data.handId].options.shakeTime * 0.75);
+			if(data.name){
+				var fullScreenShowTimeline = fullScreen.show([
+					{ text: 'Snake', color: 0xffffff },
+					{ text: 'Blocked', color: 0xF5CE2C },
+					{ text: 'You', color: 0xF5CE2C },
+				], { text: '\uf05e', color: 0xF5CE2C },
+				{ delayTime: 0.75});
+				timeline.add(fullScreenShowTimeline, 0);
+			}
+			timeline.add(function(){
+				_.invoke(hand, 'enable', true);
+			});
 			// timeline.add(_.invoke(hand, 'shake', isLeft, color), null, null, 0.05);
 			// timeline.add(_.invoke(hand, 'shake'), '-=0.75', null, 0.05);
 			Audio.instance.play('fx', 'card/boardFailed');
 			return;
 		}
-		// Destroy old card
-		var oldCard = hand[data.handId];
-		oldCard.enable(false);
-		_.delay(function(){
-			oldCard.destroy();
-		}, oldCard.options.placeCardTime * 1000);
 		// create new card
+		_.invoke(hand, 'enable', true);
+		destroyCard(hand[data.handId]);
 		player.game.cardCount--;
-		var isEmpty = player.game.cardCount < 5;
-		var newCard = drawCard(data.newCard, data.handId, false, isEmpty);
-		newCard.startCard();
-		if(isEmpty){
-			newCard.enable(false);
+		hand[data.handId] = nextCard;
+		nextCard.card = data.newCard;
+		var timeline = nextCard.startCard();
+		if(player.game.cardCount < 5){
+			nextCard.enable(false);
+		} else {
+			timeline.add(nextCard.appearCard())
 		}
-		header.setText(getHeaderText());
+		nextCard = null;
+		setFooter();
 		Audio.instance.play('fx', 'card/boardSuccess');
 	}
 
 	function handleAchievement(data){
 		console.log('handleAchievement:', data);
-		var achievment = getAchievementData(data.achievement, data.data);
-		if(!achievment){
-			return;
+		var achievement = data.achievement;
+		data = data.data;
+		switch(achievement){
+			case 'screwed':
+				onScrewed(data.name);
+				return { text: 'Blocked by ' + data.name, isGood: false };
+			case 'screw':
+				return { text: 'You blocked ' + data.name, isGood: true, sound: 'achievement/screw' };
+			case 'firstOfGame':
+				return { text: 'First card', isGood: true };
+			case 'streak':
+				return { text: 'You are ' + getStreakName(data.level), isGood: true, sound: 'achievement/streak' + data.level };
+			// case 'streakBroke':
+			// 	return { text: data.name + ' stopped your streak', isGood: false };
+			// case 'streakBreak':
+			// 	return { text: 'You stopped ' + data.name + '\'s streak', isGood: true };
+			case 'last':
+				footer.flash(data.count);
+				Audio.instance.play('fx', 'achievement/last' + data.count);
+				return ;
+			case 'test':
+				return { text: 'I am testing this thing', isGood: data.isGood };
 		}
-		if(achievment.sound){
-			Audio.instance.play('fx', achievment.sound);
-		}
-		var color = achievment.isGood ? 0x00aa00 : 0xaa0000;
-		header.tweenTitleDelay(achievment.text, color, 0.1, 5);
 	}
 
 	function handleLeave(data){
@@ -328,24 +379,7 @@ var playerState = (function(){
 	// other
 
 	function getAchievementData(achieve, data){
-		switch(achieve){
-			case 'screwed':
-				return { text: 'Blocked by ' + data.name, isGood: false };
-			case 'screw':
-				return { text: 'You blocked ' + data.name, isGood: true, sound: 'achievement/screw' };
-			case 'firstOfGame':
-				return { text: 'First card', isGood: true };
-			case 'streak':
-				return { text: 'You are ' + getStreakName(data.level), isGood: true, sound: 'achievement/streak' + data.level };
-			// case 'streakBroke':
-			// 	return { text: data.name + ' stopped your streak', isGood: false };
-			// case 'streakBreak':
-			// 	return { text: 'You stopped ' + data.name + '\'s streak', isGood: true };
-			case 'last':
-				return { text: data.count + ' card' + (data.count === 1 ? '' : 's') + ' left', isGood: true, sound: 'achievement/last' + data.count };
-			case 'test':
-				return { text: 'I am testing this thing', isGood: data.isGood };
-		}
+		
 	}
 
 	function getStreakName(level){
@@ -363,10 +397,24 @@ var playerState = (function(){
 		return card1 === card2;
 	}
 
+	function destroyNext(){
+		if(!nextCard){
+			return;
+		}
+		nextCard.destroy();
+	}
+
+	function destroyCard(card){
+		card.enable(false);
+		_.delay(function(){
+			card.destroy();
+		}, card.options.placeCardTime * 1000);
+	}
+
 	function drawCard(card, index, isNew, isEmpty){
 		var card = new com.speez.components.Card(index, 
-			boardWidth, headerHeight + cardHeight * index, 
-			boardWidthRight - boardWidth, cardHeight, {
+			boardWidth, cardHeight * index + headerHeight, 
+			cardWidth, cardHeight, {
 				colors: colors,
 				waitCard: isEmpty ? 'speez'[index] : '+',
 				textColor: isEmpty ? 0x222222 : 0xeeeeee,
@@ -383,7 +431,7 @@ var playerState = (function(){
 			card.options.startTime = 0.5;
 			card.options.spinTime = 0.5;
 		}
-		hand[index] = card;
+		// container.addChild(card);
 		return card;
 	}
 
@@ -401,7 +449,11 @@ var playerState = (function(){
 	}
 
 	function getHeaderText(){
-		return player.name + ' - ' + player.game.cardCount + ' card' + (player.game.cardCount < 2 ? '' : 's' ) + ' left';
+		return player.name;
+	}
+
+	function setFooter(){
+		footer.setProgress(player.game.cardCount / player.game.cardTotal);
 	}
 
 	// test
@@ -429,7 +481,9 @@ var playerState = (function(){
 		var returnData = _.pick(data, ['boardId', 'handId']);
 		if(boardId % 2 === 0){
 			var newCard = _.random(0, 9);
-			if(player.game.cardCount === 2){
+			if(player.game.cardCount === 6){
+				handleAchievement({ achievement: 'last', data: { count: 5 } });
+			} else if(player.game.cardCount === 2){
 				handleAchievement({ achievement: 'last', data: { count: 1 } });
 			}
 			if(boardId === 0){
@@ -456,7 +510,7 @@ var playerState = (function(){
 				handleCardBoard(_.extend({ confirm: false }, returnData));
 			}, 1000);
 		} else {
-			handleCardBoard(_.extend({ confirm: false }, returnData));
+			handleCardBoard(_.extend({ confirm: false, name: 'Slug' }, returnData));
 		}
 	}
 
@@ -475,7 +529,7 @@ var playerState = (function(){
 
 		create: function(){
 			lastCards = 5;
-			common.tweenStageColor(0x333333, handleStageReady);
+			common.tweenStageColor(0x1E1E1E, handleStageReady);
 
 			socket.on('speed:player:leave', handleLeave);
 			socket.on('speed:player:start', handleStart);
@@ -484,6 +538,12 @@ var playerState = (function(){
 		},
 
 		update: function(){
+		},
+
+		render: function(){
+			if(config.isTest){
+				game.debug.cameraInfo(game.camera, 32, 32);
+			}
 		},
 
 		shutdown: function(){

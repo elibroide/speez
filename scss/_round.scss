@@ -1,0 +1,13 @@
+// _round.scss
+
+@mixin border-radius($top, $left, $down, $right) {
+	border-radius: $top + px $left + px $down + px $right + px;
+}
+
+.round-right {
+	border-radius: 0 $global-rounded $global-rounded 0;
+}
+
+.round-left {
+	border-radius: $global-rounded 0 0 $global-rounded;
+}

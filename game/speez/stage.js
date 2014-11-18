@@ -12,7 +12,7 @@ function Stage(socket, id, options){
 	this.state = Stage.STATE_LOBBY;
 
 	// Screw achievements
-	this.on(Stage.EVENT_CARD_FAILED, this.checkScrewed);
+	// this.on(Stage.EVENT_CARD_FAILED, this.checkScrewed);
 
 	// First of game achievements
 	this.on(Stage.EVENT_CARD_SUCCESS, this.checkFirstOfGame);
@@ -202,11 +202,11 @@ Stage.prototype.startGame = function() {
 
 Stage.prototype.playCardBoard = function(player, card, boardId) {
 	if(this.state !== Stage.STATE_PLAY) {
-		return false;
+		return { confirm: false, reason: 'not in play' };
 	}
 	var board = this.boards[boardId];
 	if(board === undefined){
-		return false;
+		return {confirm: false, reason: 'no board'};
 	}
 	if(this.checkCardProximity(card, board.current)){
 		this.lastCardTime = Date.now();
@@ -217,10 +217,10 @@ Stage.prototype.playCardBoard = function(player, card, boardId) {
 		board.currentPlayer = player;
 		board.currentTimestamp = this.lastCardTime;
 		this.emit(Stage.EVENT_CARD_SUCCESS, player, card, board);
-		return true;
+		return { confirm: true };
 	}
 	this.emit(Stage.EVENT_CARD_FAILED, player, card, board);
-	return false;
+	return { confirm: false, reason: 'failed', name: this.checkScrewed(player, card, board) };
 };
 
 Stage.prototype.saveLastPlay = function() {
@@ -235,7 +235,21 @@ Stage.prototype.saveLastPlay = function() {
 Stage.prototype.playCardOverlap = function(player, card, overlapCard) {
 	this.emit(Stage.EVENT_CARD_OVERLAP, player, card, overlapCard);
 	this.history.push({ action: Stage.ACTION_CARD_OVERLAP, player: player.id, card: card, overlapCard: overlapCard });
-	return true;
+	return { confirm: true };
+};
+
+Stage.prototype.setCards = function() {
+	var cards = Math.ceil(this.cardCount / 10) * 10 * this.countPlayer();
+	this.library = [];
+	for (var i = 0; i < cards; i++) {
+		this.library.push(i % 10);
+	};
+	this.library = _.shuffle(this.library);
+	console.log(cards);
+};
+
+Stage.prototype.getCard = function() {
+	return this.library.pop();
 };
 
 Stage.prototype.randomizeBoards = function() {
@@ -328,7 +342,9 @@ Stage.prototype.checkScrewed = function(player, card, board) {
 	if(player.id !== board.currentPlayer.id && Date.now() - board.currentTimestamp < Stage.SCREW_TIME){
 		this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_SCREWED, { name: board.currentPlayer.name, boardId: board.id });
 		this.emit(Stage.EVENT_ACHIEVE, board.currentPlayer, Stage.ACHIEVE_SCREW, { name: player.name, boardId: board.id });
+		return board.currentPlayer.name;
 	}
+	return null;
 };
 
 Stage.prototype.checkFirstOfGame = function(player, card, board) {

@@ -21,7 +21,7 @@ var version = '0.0.0-10';
 
 function init(){
 
-    console.log('ver: ' + version);
+    console.log('ver: ' + version, common.toRgb(0xffffff));
 
     config = {
         dpr: window.devicePixelRatio,
@@ -50,5 +50,21 @@ function init(){
     game.state.add('stage', stageState);
     game.state.add('stageFinish', stageFinishState);
     game.state.start('boot');
+
 }
 // window.addEventListener('load', initGame);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 // main.js
-
+var board;
 var mainState = (function(){
 	
 	// data
@@ -65,6 +65,24 @@ var mainState = (function(){
     	// Header
 	}
 
+	function create(minX, maxX, minY, maxY){
+		board = new com.speez.components.StageBoard({ 
+			radius: _.random(150, 250), 
+			color: _.random(0x222222, 0xbbbbbb),
+			countingTime: _.random(5, 10),
+			card: _.random(0, 9),
+		});
+		board.counted.addOnce(function(){
+			create(minX, maxX, minY, maxY);
+		});
+    	board.x = originalWidthCenter + _.random(minX, maxX);
+		board.y = originalHeightCenter + _.random(minY, maxY);
+		board.appear();
+		board.appeared.addOnce(board.counting.bind(board));
+		board.counted.addOnce(board.destroy.bind(board));
+    	container.addChild(board);
+	}
+
 	function toggleButtons(on){
 		if(on) {
 			buttons.callAll('revive');
@@ -112,6 +130,7 @@ var mainState = (function(){
 					{ color: colors[3] },
 				],
 				cardCount: 6,
+				cardTotal: 6,
 			}
 		}
 		player.game.hand.push(1);
@@ -207,6 +226,7 @@ var mainState = (function(){
 	function handleLoad(data){
 		console.log('handleLoad:', data);
 		player.game = data;
+		player.game.cardTotal = player.game.cardCount;
 		toggleLobby(false);
 		common.tweenStageColor(0xffffff, function(){
 			setTimeout(function(){ game.state.start('player'); }, 500);
