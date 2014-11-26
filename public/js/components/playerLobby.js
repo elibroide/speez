@@ -71,7 +71,7 @@ com.speez.components.PlayerLobby = (function(){
 		timeline.to(this.name, this.options.setPlayerTime * 0.5, { alpha: 1 }, 'half');
 		timeline.to(this.icon, this.options.setPlayerTime * 0.5, { alpha: this.options.iconJoinAlpha }, 'half');
 		timeline.add(function(){
-			this.icon.text = player.victories.toString();
+			this.icon.text = player.points.toString();
 		}.bind(this), 'half');
 		return timeline;
 	};

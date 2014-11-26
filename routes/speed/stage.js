@@ -18,10 +18,11 @@ function getConfig(){
 
 // handlers
 
-function handleAchieve(player, achievment, data){
-	console.log(this.id + ' -> ' + player.id + ':' + achievment, '[', data, ']');
-	player.socket.emit('speed:player:achieve', { achievement: achievment, data: data })
-	this.socket.emit('speed:stage:achieve', { achievement: achievment, data: data, player: player.id })
+function handleAchieve(player, achievment, data, points){
+	console.log(this.id + ' -> ' + player.id + ':' + achievment, '[', data, ']', points);
+	var sendData = { achievement: achievment, data: data, points: points };
+	player.socket.emit('speed:player:achieve', sendData);
+	this.socket.emit('speed:stage:achieve', _.extend(sendData, { player: player.id }));
 }
 
 // exports
@@ -37,9 +38,7 @@ module.exports.create = function(req, id){
 }
 
 module.exports.disconnect = function(socket){
-	console.log('what the heck');
 	socket.stage.eachPlayer(function(player){
-		console.log('what the heck',player.name);
 		player.socket.emit('speed:player:leave', {
 			code: Player.QUIT_STAGE_DISCONNECTED,
 			reason: 'stage disconnected'

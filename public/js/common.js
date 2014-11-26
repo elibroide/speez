@@ -3,6 +3,20 @@
 
 var common = {
 
+	flipOrientation: function(targetOrientation){
+		console.log('try to flip ' + orientation + ' to ' + targetOrientation);
+		if(orientation === targetOrientation){
+			return;
+		}
+		console.log('Flipping ' + orientation + ' to ' + targetOrientation);
+		orientation = targetOrientation;
+		var temp = originalWidth;
+		originalWidth = originalHeight;
+		originalHeight = temp;
+		originalWidthCenter = originalWidth * 0.5;
+		originalHeightCenter = originalHeight * 0.5;
+	},
+
 	createBlankBackground: function(color){
 		if(color === undefined){
 			color = 0xffffff;
@@ -148,6 +162,14 @@ var common = {
 		return 'rgb(' + [(color & 0xff0000) >> 16, (color & 0x00ff00) >> 8, color & 0x0000ff].join(',') + ')';
 	},
 
+	toRgba: function(color, alpha){
+		if(alpha === undefined){
+			alpha = 0;
+		}
+		alpha += (color & 0xff000000) >> 20;
+		return 'rgba(' + [(color & 0xff0000) >> 16, (color & 0x00ff00) >> 8, color & 0x0000ff].join(',') + ', ' + alpha + ')';
+	},
+
 	toRgbHex: function(color, prefix){
 		if(prefix === undefined){
 			prefix = '';
@@ -161,6 +183,27 @@ var common = {
 		return prefix + r + g + b;
 	},
 
+	addHsl: function(color, h, s, l){
+		var rgb = Phaser.Color.getRGB(color);
+		var hsl = common.rgbToHsl(rgb.r, rgb.g, rgb.b);
+
+		if(h === undefined){
+			h = 0;
+		}
+		if(s === undefined){
+			s = 0;
+		}
+		if(l === undefined){
+			l = 0;
+		}
+		h = Math.min(Math.max(hsl.h + h, 0), 1);
+		s = Math.min(Math.max(hsl.s + s, 0), 1);
+		l = Math.min(Math.max(hsl.l + l, 0), 1);
+
+		var hue = common.hslToRgb(h, s, l);
+		return common.rgb(hue.r, hue.g, hue.b);
+	},
+
 	textColorChange: function(){
 		return function(color){
 			if(color !== undefined){
@@ -170,11 +213,14 @@ var common = {
 		}
 	},
 
-	graphicsColorChange: function(i){
+	graphicsColorChange: function(i, property){
+		if(property === undefined){
+			property = 'fillColor';
+		}
 		return function(color){
 			if(color !== undefined){
 				this.color = common.getRgb(color);
-				this.graphicsData[i].fillColor = this.color;
+				this.graphicsData[i][property] = this.color;
 			}
 			return this.graphicsData[i].fillColor;
 		}
@@ -195,6 +241,52 @@ var common = {
 		rgb.g = Math.max(0, Math.min(255, rgb.g + diff));
 		rgb.b = Math.max(0, Math.min(255, rgb.b + diff));
 		return common.rgb(rgb.r, rgb.g, rgb.b);
+	},
+
+	rgbToHsl: function(r, g, b){
+	    r /= 255, g /= 255, b /= 255;
+	    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+	    var h, s, l = (max + min) / 2;
+
+	    if(max == min){
+	        h = s = 0; // achromatic
+	    }else{
+	        var d = max - min;
+	        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+	        switch(max){
+	            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+	            case g: h = (b - r) / d + 2; break;
+	            case b: h = (r - g) / d + 4; break;
+	        }
+	        h /= 6;
+	    }
+
+	    return {h: h, s: s, l: l};
+	},
+
+	hslToRgb: function(h, s, l){
+	    var r, g, b;
+
+	    if(s == 0){
+	        r = g = b = l; // achromatic
+	    }else{
+	        function hue2rgb(p, q, t){
+	            if(t < 0) t += 1;
+	            if(t > 1) t -= 1;
+	            if(t < 1/6) return p + (q - p) * 6 * t;
+	            if(t < 1/2) return q;
+	            if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+	            return p;
+	        }
+
+	        var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+	        var p = 2 * l - q;
+	        r = hue2rgb(p, q, h + 1/3);
+	        g = hue2rgb(p, q, h);
+	        b = hue2rgb(p, q, h - 1/3);
+	    }
+
+	    return {r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255)};
 	},
 }
 

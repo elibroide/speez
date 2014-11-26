@@ -29,12 +29,10 @@ module.exports.join = function(req, stage) {
 		return;
 	}
 	player.name = join.name;
-	stage.socket.emit('speed:stage:join', _.pick(player, ['id', 'name']));
-	req.io.respond({
-		confirm: true,
-		id: player.id,
-		name: player.name,
-	});
+	var playerData = _.pick(player, ['id', 'name', 'points']);
+	console.log(playerData);
+	stage.socket.emit('speed:stage:join', playerData);
+	req.io.respond(_.extend({ confirm: true }, playerData));
 	return player;
 }
 
@@ -130,7 +128,7 @@ module.exports.messages = {
 		}
 		req.io.respond(data);
 		var win = req.stage.isWin();
-		req.stage.socket.emit('speed:stage:card', { boardId: req.data.boardId, card: data.card, playerId: req.player.id });
+		req.stage.socket.emit('speed:stage:cardBoard', { boardId: req.data.boardId, card: data.card, playerId: req.player.id, points: data.points, cardCount: req.player.cardCount });
 		if(win){
 			req.stage.eachPlayer(function(player){
 				if(player.id === win){
@@ -146,6 +144,7 @@ module.exports.messages = {
 	cardOverlap: function(req) {
 		var data = req.player.playOverlap(req.data.handId, req.data.overlapId);
 		data = _.extend(data, { handId: req.data.handId, overlapId: req.data.overlapId })
+		req.stage.socket.emit('speed:stage:cardOverlap', { playerId: req.player.id, points: data.points, cardCount: req.player.cardCount });
 		req.io.respond(data);
 	},
 

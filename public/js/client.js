@@ -5,6 +5,7 @@ var com;
     com = $.extend({ speez: {} }, com);
 })(window);
 
+var orientation = 'portrait';
 var originalWidth = 640;
 var originalWidthCenter = originalWidth * 0.5;
 var originalHeight = 960;

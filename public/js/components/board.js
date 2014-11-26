@@ -115,6 +115,7 @@ com.speez.components.Board = (function(){
 		this.cardTimeline = timeline;
 
 		// name
+		return;
 		if(this.nameTimeline && this.nameTimeline.isActive()){
 			if(!name || name !== this.currentName){
 				this.nameTimeline.seek('fadeOut');

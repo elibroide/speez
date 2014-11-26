@@ -16,18 +16,13 @@ com.speez.components.Incoming = (function(){
 	Incoming.prototype.constructor = Incoming;
 
 	// private methods
-	function tweenStart(incoming){
-		var target = this.target;
-		incoming.addChild(target);
-		if(target.sound){
-			Audio.instance.play('fx', target.sound);
-		}
-	}
 
-	function tweenComplete(incoming){
-		var target = this.target;
-		incoming.removeChild(target);
-		target.destroy();
+	function complete(options, wrapper){
+		this.timeline.kill();
+		wrapper.destroy();
+		if(options.complete){
+			options.complete();
+		}
 	}
 
 	// public methods
@@ -36,7 +31,13 @@ com.speez.components.Incoming = (function(){
 		return _.map(texts, function(item){
 			var text = new Phaser.Text(game, 0, 0, item.text, format);
 	    	text.anchor.set(0.5);
+	    	text.anchor.set(0.5);
+	    	text.scale.set(0);
 	    	text.sound = item.sound;
+
+	    	if(item.angle){
+				text.angle = item.angle;
+	    	}
 	    	return text;
 		}.bind(this))
 	}
@@ -52,48 +53,97 @@ com.speez.components.Incoming = (function(){
 	Incoming.prototype.show = function(items, options) {
 		options = _.extend({
 			format: {
-				font: "200px Arial",
-		        fill: "#eeeeee",
+				font: "200px Montserrat",
+		        fill: "#111111",
 		        align: "center"
 			},
 			isTexts: false,
-			fromScale: 0.5,
-			toScale: 1.5,
-			time: 2,
-			fadeInTime: 0.5,
-			fadeOutDelayTime: 1,
-			fadeOutTime: 0.5,
-			stagger: 1,
+
+			size: 150,
 			delay: 0,
+			textAngleTime: 1,
+			textAngleDelay: 0.4,
+			itemInTime: 1.5,
+			itemOutTime: 1,
+			inTime: 1,
+			outTime: 1.5,
+			delayBetween: 1,
+			timeScale: 1,
 		}, options);
+		// Effect Options
+		options.effectOptions = _.extend({
+
+		}, options.effectOptions);
+		// Effect Animation Options
+		options.effectAnimationOptions = _.extend({
+
+		}, options.effectAnimationOptions);
 
 		if(options.isTexts){
 			items = this.makeTexts(items, options.format);
 		}
 
-		var scales = [];
-		_.each(items, function(item){
-			scales.push(item.scale);
-			item.scale.set(options.fromScale);
-			item.alpha = 0;
-		}.bind(this));
+		var wrapper = game.add.sprite();
+		this.addChild(wrapper);
 
-		var timeline = new TimelineLite({ delay: options.delay });
-		timeline.staggerTo(items, options.fadeInTime, { alpha: 1, onStart: tweenStart, onStartParams: [this] }, options.stagger, 0);
-		timeline.staggerTo(scales, options.time, { x: options.toScale, y: options.toScale }, options.stagger, 0);
-		timeline.staggerTo(items, options.fadeOutTime, { alpha: 0, delay: options.fadeOutDelayTime, onComplete: tweenComplete, onCompleteParams: [this] }, options.stagger, 0);
-		if(!options.complete){
-			return;
-		}
-		if(!options.completeTime){
-			options.completeTime = 0;
-		} 
-		timeline.add(options.complete, '-=' + options.completeTime);
-		if(this.timeline){
-			this.timeline.kill();
-		}
-		this.timeline = timeline;
+		var incomingEffect = new com.speez.components.IncomingEffect(options.effectOptions);
+		wrapper.addChild(incomingEffect);
+
+    	var timeline = new TimelineMax({ onComplete: complete, onCompleteScope: this, onCompleteParams: [ options, wrapper ] });
+
+    	for (var i = 0; i < items.length; i++) {
+    		var item = items[i];
+
+    		var blank = game.add.graphics();
+			blank.beginFill(0xffffff);
+	    	// blank.scale.set(0);
+			blank.drawCircle(0, 0, options.size);
+
+	    	var center = game.add.sprite();
+	    	center.addChild(blank);
+	    	center.addChild(item);
+	    	center.scale.set(0);
+			wrapper.addChild(center);
+
+			var centerTimeline = new TimelineMax();
+			// angle
+	    	centerTimeline.to(item, options.textAngleTime, { angle: 0, ease: Sine.easeOut }, options.textAngleDelay);
+	    	// item
+	    	centerTimeline.to(item.scale, options.itemInTime, { x: 1, y: 1, ease: Sine.easeOut }, 0);
+	    	centerTimeline.addLabel('itemShrink');
+	    	centerTimeline.to(item.scale, options.itemOutTime, { x: 0, y: 0, ease: Sine.easeIn }, 'itemShrink');
+	    	// white
+	    	centerTimeline.to(center.scale, options.inTime, { x: 1, y: 1, ease: Sine.easeOut }, 0);
+	    	centerTimeline.addLabel('shrink', options.inTime);
+	    	centerTimeline.to(center.scale, options.outTime, { x: 0, y: 0, ease: Sine.easeIn }, 'shrink');
+	    	
+	    	timeline.addLabel('time' + i, '+=' + (i === 0 ? 0 : options.delayBetween));
+	    	timeline.add(centerTimeline, 'time' + i);
+    		timeline.add(incomingEffect.animate(options.effectAnimationOptions), 'time' + i);
+    	};
+    	timeline.timeScale(options.timeScale);
+    	this.timeline = timeline;
+    	return timeline;
 	};
 
 	return Incoming;
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

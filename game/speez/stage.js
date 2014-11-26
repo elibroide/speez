@@ -11,6 +11,9 @@ function Stage(socket, id, options){
 	this.colors = options.colors;
 	this.state = Stage.STATE_LOBBY;
 
+	// achievements
+	this.on(Stage.EVENT_ACHIEVE, this.handleAchievePoints);
+
 	// Screw achievements
 	// this.on(Stage.EVENT_CARD_FAILED, this.checkScrewed);
 
@@ -34,6 +37,8 @@ Stage.prototype.__proto__ = events.EventEmitter.prototype;
 
 // Constants
 
+Object.defineProperty(Stage, "CARD_BOARD_POINTS_ANY_THRESHOLD", { value: 3000 });
+Object.defineProperty(Stage, "CARD_BOARD_POINTS_THRESHOLD", { value: 1000 });
 Object.defineProperty(Stage, "CARD_PUT_TIMEOUT", { value: 1000 });
 Object.defineProperty(Stage, "MAX_PLAYERS", { value: 5 });
 
@@ -56,7 +61,7 @@ Object.defineProperty(Stage, "ACTION_CARD_BOARD", { value: 'cardBoard' });
 Object.defineProperty(Stage, "ACTION_CARD_OVERLAP", { value: 'cardOverlap' });
 Object.defineProperty(Stage, "ACTION_SPEEDY", { value: 'speedy' });
 
-Object.defineProperty(Stage, "SCREW_TIME", { value: 1000 });
+Object.defineProperty(Stage, "SCREW_TIME", { value: 10000 });
 Object.defineProperty(Stage, "LAST_COUNT", { value: [1, 5] });
 Object.defineProperty(Stage, "STREAK_COUNT", { value: [3, 5, 10] });
 
@@ -145,17 +150,22 @@ Stage.prototype.isCanSpeedy = function() {
 Stage.prototype.speedy = function() {
 	// Saving history stuff
 	this.saveLastPlay();
-	this.history.push({ action: Stage.ACTION_SPEEDY });
-	this.currentBoard = null;
-	_.each(this.boards, function(board){
-		board.saveLastPlay(board);
-		board.currentPlayer = null;
-		board.history.push({ action: Stage.ACTION_SPEEDY });
-	});
+	this.saveSpeedy();
 	// setting speedy mode
 	this.randomizeBoards();
 	this.emit(Stage.EVENT_SPEEDY);
 	this.state = Stage.STATE_SPEEDY;
+};
+
+Stage.prototype.saveSpeedy = function() {
+	var timestamp = Date.now();
+	this.history.push({ action: Stage.ACTION_SPEEDY, timestamp: timestamp });
+	this.currentBoard = null;
+	_.each(this.boards, function(board){
+		board.saveLastPlay(board);
+		board.currentPlayer = null;
+		board.history.push({ action: Stage.ACTION_SPEEDY, timestamp: timestamp });
+	});
 };
 
 Stage.prototype.play = function() {
@@ -195,6 +205,7 @@ Stage.prototype.startGame = function() {
 	this.restoreReady();
 	this.firstPlayerGame = null;
 	this.history = [];
+	this.saveSpeedy();
 	this.lastCardTime = 0;
 	this.state = Stage.STATE_SPEEDY;
 	this.emit(Stage.EVENT_START);
@@ -217,10 +228,10 @@ Stage.prototype.playCardBoard = function(player, card, boardId) {
 		board.currentPlayer = player;
 		board.currentTimestamp = this.lastCardTime;
 		this.emit(Stage.EVENT_CARD_SUCCESS, player, card, board);
-		return { confirm: true };
+		return { confirm: true, points: this.getCardBoardPoints(player, board, card) };
 	}
 	this.emit(Stage.EVENT_CARD_FAILED, player, card, board);
-	return { confirm: false, reason: 'failed', name: this.checkScrewed(player, card, board) };
+	return { confirm: false, reason: 'failed', screw: this.checkScrewed(player, card, board) };
 };
 
 Stage.prototype.saveLastPlay = function() {
@@ -235,7 +246,7 @@ Stage.prototype.saveLastPlay = function() {
 Stage.prototype.playCardOverlap = function(player, card, overlapCard) {
 	this.emit(Stage.EVENT_CARD_OVERLAP, player, card, overlapCard);
 	this.history.push({ action: Stage.ACTION_CARD_OVERLAP, player: player.id, card: card, overlapCard: overlapCard });
-	return { confirm: true };
+	return { confirm: true, points: this.getCardOverlapPoints() };
 };
 
 Stage.prototype.setCards = function() {
@@ -333,15 +344,37 @@ Stage.prototype.quit = function() {
 	
 };
 
+// Points
+
+Stage.prototype.getWinnerPoints = function() {
+	return 1000;
+};
+
+Stage.prototype.getCardBoardPoints = function(player, board, card) {
+	return 100;
+};
+
+Stage.prototype.getCardOverlapPoints = function(player, card, overlapCard) {
+	return 50;
+};
+
+Stage.prototype.getScrewPoints = function() {
+	return 50;
+};
+
 // Achievements
+
+Stage.prototype.handleAchievePoints = function(player, achievement, data, points) {
+	player.addPoints(points);
+};
 
 Stage.prototype.checkScrewed = function(player, card, board) {
 	if(!board.currentPlayer){
 		return;
 	}
 	if(player.id !== board.currentPlayer.id && Date.now() - board.currentTimestamp < Stage.SCREW_TIME){
-		this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_SCREWED, { name: board.currentPlayer.name, boardId: board.id });
-		this.emit(Stage.EVENT_ACHIEVE, board.currentPlayer, Stage.ACHIEVE_SCREW, { name: player.name, boardId: board.id });
+		// this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_SCREWED, { screw: board.currentPlayer.name, boardId: board.id });
+		this.emit(Stage.EVENT_ACHIEVE, board.currentPlayer, Stage.ACHIEVE_SCREW, { screw: player.name, boardId: board.id }, this.getScrewPoints());
 		return board.currentPlayer.name;
 	}
 	return null;
@@ -350,7 +383,7 @@ Stage.prototype.checkScrewed = function(player, card, board) {
 Stage.prototype.checkFirstOfGame = function(player, card, board) {
 	if(!this.firstPlayerGame){
 		this.firstPlayerGame = player;
-		this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_FIRST_OF_GAME, {  });
+		this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_FIRST_OF_GAME, { }, 10);
 	}
 };
 
@@ -386,7 +419,7 @@ Stage.prototype.checkStreak = function(player) {
 		return;
 	}
 	// Notify achievement
-	this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_STREAK, { level: level });
+	this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_STREAK, { level: level }, level * 50);
 };
 
 Stage.prototype.checkStreakBreak = function(player) {

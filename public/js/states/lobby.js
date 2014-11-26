@@ -51,13 +51,14 @@ var lobbyState = (function(){
 	    playersIcons = [];
 	    var distance = 250;
 	    var colors = [ 0xFF0000, 0x336699, 0xFFCC00, 0x00ff00 ]
-	    for(var i=0;i<5;i++){
-	    	var player = new PlayerLobby(-distance * 2 + i * distance, 50, {
+	    for(var i=0;i<4;i++){
+	    	var player = new PlayerLobby(-distance * 1.5 + i * distance, 50, {
 	    		readyColor: colors[i],
 	    	});
 	    	playersIcons.push(player);
 			lobbyGroup.add(player);
 	    }
+	    playersIcons.push(playersIcons.shift());
 
     	lobbyGroup.x = originalWidthCenter;
     	lobbyGroup.y = originalHeightCenter;
@@ -65,9 +66,16 @@ var lobbyState = (function(){
 
 		container.alpha = 0;
 		header.alpha = 0;
+	}
 
+	function appearGui(){
 		var timeline = new TimelineLite();
 		timeline.to([container, header], 1, { alpha: 1 });
+	}
+
+	function disappearGui(){
+		var timeline = new TimelineLite();
+		timeline.to([container, header], 1, { alpha: 0 });
 	}
 
 	// Various
@@ -75,7 +83,7 @@ var lobbyState = (function(){
 	function getAvailableIcon(){
 		for(var i=0;i<playersIcons.length; i++){
 			if(!playersIcons[i].player){
-				return playersIcons[i];
+				return i;
 			}
 		}
 	}
@@ -102,6 +110,7 @@ var lobbyState = (function(){
 			players: [],
 		};
 		drawGui();
+		appearGui();
 	}
 
 	function handleNextLobby(data) {
@@ -109,23 +118,26 @@ var lobbyState = (function(){
 		_.each(_.keys(stage.players), function(key){
 			var player = stage.players[key];
 			player.icon = getAvailableIcon();
-			player.icon.setPlayer(player);
-		})
+			playersIcons[player.icon].setPlayer(player);
+		});
+		appearGui();
 	}
 
 	function handleJoin(data){
 		console.log('speed:stage:join ' + JSON.stringify(data))
 
-		stage.players[data.id] = data;
-		data.victories = 0;
-		data.icon = getAvailableIcon();
-		data.icon.setPlayer(data);
+		var player = data;
+		stage.players[data.id] = player;
+		player.victories = 0;
+		player.icon = getAvailableIcon();
+		playersIcons[player.icon].setPlayer(player);
 	}
 
 	function handleLeave(data){
 		console.log('speed:stage:leave ' + JSON.stringify(data))
 
-		stage.players[data.id].icon.removePlayer();
+		var player = stage.players[data.id];
+		playersIcons[player.icon].removePlayer();
 		delete stage.players[data.id];
 	}
 
@@ -136,7 +148,7 @@ var lobbyState = (function(){
 			return;
 		}
 		player.isReady = data.isReady;
-		player.icon.setReady(data.isReady);
+		playersIcons[player.icon].setReady(data.isReady);
 		if(!data.isReady){
 			return;
 		}
@@ -161,6 +173,7 @@ var lobbyState = (function(){
 		},
 
 		create: function(){
+			common.flipOrientation('landscape');
 			layout = new Layout({
 				game: game,
 	        	width: originalWidth,
@@ -188,9 +201,6 @@ var lobbyState = (function(){
 		},
 
 		shutdown: function(){
-			_.each(_.keys(stage.players), function(key){
-				delete stage.players[key].icon;
-			});
 			socket.off('speed:stage:join', handleJoin);
 			socket.off('speed:stage:leave', handleLeave);
 			socket.off('speed:stage:ready', handleReady);

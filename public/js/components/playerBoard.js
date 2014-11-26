@@ -28,14 +28,15 @@ com.speez.components.PlayerBoard = (function(){
 		this.background.y = height / 2;
 		this.background.beginFill(this.options.color);
 		this.background.fillAlpha = options.diffuseAlpha;
-		// this.background.drawCircle(0, 0, options.radius);
-		this.background.drawEllipse(0, 0, width, height*0.43);
+		this.background.drawCircle(0, 0, options.radius);
+		// this.background.drawEllipse(0, 0, width, height*0.43);
 		this.background.circle = this.background.graphicsData[0];
 		this.addChild(this.background);
 
 		this.backgroundOutline = new Phaser.Graphics(game);
 		this.backgroundOutline.lineStyle(5, this.options.color, 1, [10]);
-		this.backgroundOutline.drawEllipse(0, 0, width, height*0.43);
+		// this.backgroundOutline.drawEllipse(0, 0, width, height*0.43);
+		this.backgroundOutline.drawCircle(0, 0, options.radius);
 		this.backgroundOutline.angle = this.isLeft ? 180 : 0;
 		this.backgroundOutline.cacheAsBitmap = true;
 		this.backgroundOutline = game.add.sprite(this.background.x, height / 2, this.backgroundOutline.generateTexture());
@@ -67,6 +68,18 @@ com.speez.components.PlayerBoard = (function(){
 		_.delay(function(){
 			this.text.text = this.isLeft ? '\uf060' : '\uf061';
 		}.bind(this), 2000);
+
+		this.effectOptions = {
+			count: 3,
+			backRadius: options.radius * 1,
+			blurRadius: 50,
+		};
+		this.animationOptions = {
+			delays: [ 0, 0, 0 ],
+			inTimes: [ 0.4, 0.5, 0.6 ],
+			outTimes: [ 0.6, 0.5, 0.4 ],
+			scales: [ 1, 0.8, 0.6 ],
+		};
 	}
 
 	// Constructors
@@ -92,6 +105,27 @@ com.speez.components.PlayerBoard = (function(){
 		this.text.visible = false;
 	};
 
+	PlayerBoard.prototype.setCard = function() {
+		return TweenLite.to(this.background.circle, this.options.proximityTime, { fillAlpha: 1 }, 0)
+	};
+
+	PlayerBoard.prototype.cancelCard = function() {
+		return TweenLite.to(this.background.circle, this.options.proximityTime, { fillAlpha: this.options.diffuseAlpha }, 0)
+	};
+
+	PlayerBoard.prototype.setCardSuccess = function() {
+		var incomingEffect = new com.speez.components.IncomingEffect(_.extend({
+			color: this.options.color,
+			name: 'board' + this.options.color.toString(16),
+			blurColor: common.addHsl(this.options.color, 0.1),
+		}, this.effectOptions));
+		this.addChildAt(incomingEffect, 0);
+
+		incomingEffect.animate(this.animationOptions);
+		incomingEffect.x = this.background.x;
+		incomingEffect.y = this.background.y;
+	};
+
 	PlayerBoard.prototype.setProximity = function(isProximity) {
 		if(!isProximity){
 			return;
@@ -111,6 +145,10 @@ com.speez.components.PlayerBoard = (function(){
 		timeline.add(this.setProximity(true));
 		timeline.add(this.cancelProximity());
 		return timeline;
+	};
+
+	PlayerBoard.prototype.postUpdate = function() {
+		this.backgroundOutline.angle += 0.2;
 	};
 
 	return PlayerBoard;

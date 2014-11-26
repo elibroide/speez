@@ -6,6 +6,7 @@ function Player(socket, id, stage){
 	this.stage = stage;
 	this.socket = socket;
 	this.id = id;
+	this.points = 0;
 }
 Player.prototype.constructor = Player;
 
@@ -46,6 +47,7 @@ Player.prototype.playCardBoard = function(handId, boardId) {
 	} else {
 		this.hand[handId] = undefined;
 	}
+	this.addPoints(response.points);
 	return _.extend({ card: card, newCard: this.hand[handId] }, response);
 };
 
@@ -73,6 +75,7 @@ Player.prototype.playOverlap = function(handId, overlapId) {
 	}
 	var newCard = this.hand[handId];
 	this.hand[handId] = newCard;
+	this.addPoints(response.points);
 	return _.extend({ newCard: this.hand[handId], newOverlapCard: newOverlapCard }, response);
 };
 
@@ -82,6 +85,13 @@ Player.prototype.makeCard = function() {
 
 Player.prototype.isWin = function() {
 	return this.cardCount === 0;
+};
+
+Player.prototype.addPoints = function(points) {
+	if(!points){
+		return;
+	}
+	this.points += points;
 };
 
 Player.prototype.quit = function() {

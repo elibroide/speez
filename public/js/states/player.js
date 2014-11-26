@@ -158,6 +158,8 @@ var playerState = (function(){
 	function placeCardBoard(card, thresholdId){
 		card.placeCardBoard();
 		var boardId = getBoard(thresholdId);
+		board = boards[boardId];
+		board.setCard();
 		if(config.isTest){
 			testCardPutBoard({ boardId: boardId, handId: card.index });
 			return;
@@ -216,6 +218,11 @@ var playerState = (function(){
 	function handleStart(data){
 		console.log('handleStart:', data);
 		drawGui();
+	}
+
+	function handlePlay(data){
+		console.log('handlePlay:', data);
+		var timeline = new TimelineMax();
 	}
 
 	function handleWinner(data){
@@ -290,6 +297,7 @@ var playerState = (function(){
 
 	function handleCardBoard(data){
 		console.log('handleCardBoard:', data);
+		_.invoke(boards, 'cancelCard');
 		_.invoke(boards, 'cancelProximity');
 		if(!data.confirm){
 			// reject
@@ -301,9 +309,9 @@ var playerState = (function(){
 			timeline.add(hand[data.handId].shake(isLeft, color));
 			timeline.add(hand[data.handId].shake(isLeft, color), '-=' + hand[data.handId].options.shakeTime * 0.75);
 			timeline.add(hand[data.handId].shake(isLeft, color), '-=' + hand[data.handId].options.shakeTime * 0.75);
-			if(data.name){
+			if(data.screw){
 				var fullScreenShowTimeline = fullScreen.show([
-					{ text: 'Snake', color: 0xffffff },
+					{ text: data.screw, color: 0xffffff },
 					{ text: 'Blocked', color: 0xF5CE2C },
 					{ text: 'You', color: 0xF5CE2C },
 				], { text: '\uf05e', color: 0xF5CE2C },
@@ -319,6 +327,8 @@ var playerState = (function(){
 			return;
 		}
 		// create new card
+		var board = boards[data.boardId];
+		board.setCardSuccess();
 		_.invoke(hand, 'enable', true);
 		destroyCard(hand[data.handId]);
 		player.game.cardCount--;
@@ -342,23 +352,21 @@ var playerState = (function(){
 		switch(achievement){
 			case 'screwed':
 				onScrewed(data.name);
-				return { text: 'Blocked by ' + data.name, isGood: false };
+				break;
 			case 'screw':
-				return { text: 'You blocked ' + data.name, isGood: true, sound: 'achievement/screw' };
+				break;
 			case 'firstOfGame':
-				return { text: 'First card', isGood: true };
+				break;
 			case 'streak':
-				return { text: 'You are ' + getStreakName(data.level), isGood: true, sound: 'achievement/streak' + data.level };
+				break;
 			// case 'streakBroke':
 			// 	return { text: data.name + ' stopped your streak', isGood: false };
 			// case 'streakBreak':
 			// 	return { text: 'You stopped ' + data.name + '\'s streak', isGood: true };
-			case 'last':
-				footer.flash(data.count);
-				Audio.instance.play('fx', 'achievement/last' + data.count);
-				return ;
+			// case 'last':
+				// break;
 			case 'test':
-				return { text: 'I am testing this thing', isGood: data.isGood };
+				break;
 		}
 	}
 
@@ -377,10 +385,6 @@ var playerState = (function(){
 	}
 
 	// other
-
-	function getAchievementData(achieve, data){
-		
-	}
 
 	function getStreakName(level){
 		switch(level){
@@ -454,6 +458,14 @@ var playerState = (function(){
 
 	function setFooter(){
 		footer.setProgress(player.game.cardCount / player.game.cardTotal);
+		if(player.game.cardCount !== 5 && player.game.cardCount !== 1){
+			return;
+		}
+		footer.flash(player.game.cardCount);
+		if(player.game.cardCount === 1){
+			footer.setProgress(1);
+		}
+		Audio.instance.play('fx', 'achievement/last' + player.game.cardCount);
 	}
 
 	// test
@@ -482,9 +494,9 @@ var playerState = (function(){
 		if(boardId % 2 === 0){
 			var newCard = _.random(0, 9);
 			if(player.game.cardCount === 6){
-				handleAchievement({ achievement: 'last', data: { count: 5 } });
+				// handleAchievement({ achievement: 'last', data: { count: 5 } });
 			} else if(player.game.cardCount === 2){
-				handleAchievement({ achievement: 'last', data: { count: 1 } });
+				// handleAchievement({ achievement: 'last', data: { count: 1 } });
 			}
 			if(boardId === 0){
 				handleCardBoard(_.extend({ confirm: true, newCard: newCard }, returnData));

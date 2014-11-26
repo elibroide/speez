@@ -23,10 +23,11 @@ var mainState = (function(){
 	var textLatency;
 
 	function drawGui(){
+
 		menuArea = new com.LayoutArea(0, 0, originalWidth, originalHeight);
 		container = game.add.sprite();
 		menuArea.attach(container, {width: originalWidth, height: originalHeight });
-		game.stage.backgroundColor = 0x000000;
+		game.stage.backgroundColor = 0x1e1e1e;
 
 		textStatus = game.add.text(originalWidthCenter, 30, "Speez", {
 		        font: "65px Arial",
@@ -63,6 +64,10 @@ var mainState = (function(){
     	container.addChild(buttons);
 
     	// Header
+	}
+
+	function getRandomTime(number, from, to){
+		return number + _.random(from, to);
 	}
 
 	function create(minX, maxX, minY, maxY){
@@ -127,7 +132,7 @@ var mainState = (function(){
 					{ color: colors[0] },
 					{ color: colors[1] },
 					{ color: colors[2] },
-					{ color: colors[3] },
+					// { color: colors[3] },
 				],
 				cardCount: 6,
 				cardTotal: 6,
@@ -152,7 +157,7 @@ var mainState = (function(){
 			game: {
 				boardCount: 4,
 				boards: [],
-			}
+			},
 		}
 		for(var i = 0; i < stage.game.boardCount; i++){
 			stage.game.boards[i] = {
@@ -164,7 +169,7 @@ var mainState = (function(){
 		textStatus.setText('Testing stage');
 		setTimeout(function(){
 			game.state.start('stage');
-		}, 1000)
+		}, 1)
 	}
 
 	function handleJoinStageClicked(){
@@ -265,6 +270,7 @@ var mainState = (function(){
 	return {
 
 		preload: function() {
+			common.flipOrientation('portrait');
 		},
 
 		create: function(){

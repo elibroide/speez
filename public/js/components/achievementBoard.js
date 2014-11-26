@@ -12,14 +12,14 @@ com.speez.components.AchievementBoard = (function(){
 			color: 0x444444,
 			alpha: 0,
 			format: {
-		        font: "75px Arial",
+		        font: "40px Arial",
 		        fill: "#eeeeee",
 		        stroke: "#111111",
 		        align: "center",
 		        strokeThickness: 10,
 		    },
 		    finalHeight: 320,
-		    distanceHeight: 100,
+		    distanceHeight: 50,
 		    textAppearTime: 1,
 		    textDelayTime: 1,
 		    textDissipateTime: 0.3,
@@ -97,7 +97,7 @@ com.speez.components.AchievementBoard = (function(){
 		timeline.add(function(){
 			text.destroy();
 			timeline.kill();	
-		})
+		});
 		timeline.add(this.setAllTextsAnimations.bind(this), '-=' + this.options.textDissipateTime * 0.75);
 		text.timeline = timeline;
 	};
