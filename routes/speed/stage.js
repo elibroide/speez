@@ -52,6 +52,18 @@ module.exports.disconnect = function(socket){
 
 module.exports.messages = {
 
+	stageLeave: function(req){
+		req.stage.eachPlayer(function(player){
+			player.socket.emit('speed:player:leave', {
+				code: Player.QUIT_STAGE_DISCONNECTED,
+				reason: 'stage left'
+			});
+			player.socket.leavePlayer();
+		});
+		req.stage.socket.leaveStage();
+		req.io.respond();
+	},
+
 	loaded: function(req) {
 		if(!req.stage.setLoaded()){
 			return;
@@ -67,15 +79,22 @@ module.exports.messages = {
 			return;
 		}
 		req.stage.speedy();
-		var boards = _.map(req.stage.boards, function(board){
-			return _.pick(board, [ 'current', 'color' ]);
+
+		req.stage.eachPlayer(function(player){
+			player.socket.emit('speed:player:speedy');
 		});
-		req.io.respond({ boards: boards });
+		req.io.respond();
 	},
 
 	play: function(req){
 		req.stage.play();
-		req.io.respond(true);
+		var boards = _.map(req.stage.boards, function(board){
+			return { stage: _.pick(board, [ 'current', 'color' ]), player: _.pick(board, ['color']) };
+		});
+		req.stage.eachPlayer(function(player){
+			player.socket.emit('speed:player:play', _.pluck(boards, 'player'));
+		});
+		req.io.respond(_.pluck(boards, 'stage'));
 	},
 
 	next: function(req){

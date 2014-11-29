@@ -96,7 +96,7 @@ var stageState;
 		var maxY = 0;
 		var rotateSpeed = 0.2;
 		var options = {
-			diffuseColor: 0x1e1e1e,
+			diffuseColor: game.stage.backgroundColor,
 		};
 		switch(stage.game.boards.length) {
 			case 2:
@@ -139,38 +139,10 @@ var stageState;
 
 	function handlePlayIncomingComplete(){
 		if(config.isTest){
-			handlePlay();
+			handlePlay(generateBoards());
 			return;
 		}
 		socket.emit('speed:stage:play', handlePlay);
-	}
-
-	function handleWinnerTimerBallExpand(){
-		var texts = [ 
-			{ text: 'SPEEZ', sound: 'countdown/sound' }, 
-			{ text: 'Complete', sound: '' }, 
-			{ text: '', sound: '' }, 
-			{ text: 'Winner', sound: '' }, 
-			{ text: 'Is', sound: '' }, 
-		];
-		if(config.isTest){
-			// texts = [ { text: 'test' }];
-		}
-		incoming.show(texts, {
-			isTexts: true,
-			complete: function(){
-				timelineEnd = _.delay(function(){ game.state.start('stageFinish') }, 1);
-			},
-			completeTime: 1,
-		});
-	}
-
-	function handleTimerBallExpandLeave(){
-		common.tweenStageColor(0xffffff, function(){
-			_.delay(function(){ 
-				game.state.start('lobby');
-			}, 1000);
-		});
 	}
 
 	// handling socket
@@ -186,8 +158,9 @@ var stageState;
 		var speezTexts = [ { text: 'SPEEZ', sound: 'countdown/speed', angle: 30 } ];
 
 		if(config.isTest){
-			handlePlayIncomingComplete();
-			return;
+			texts = [
+				{ text: '5', sound: 'countdown/5' }
+			]
 		}
 
 		var speezOptions = {
@@ -221,23 +194,18 @@ var stageState;
 				name: 'numericIncoming',
 				backRadius: 400,
 			},
-			complete: function(){
-				incoming.show(speezTexts, speezOptions);
-			},
 			timeScale: 1.7,
 		};
-		var incomingTimeline = incoming.show(texts, textsOptions);
 
-		var timeline = new TimelineMax({ delay: 3 });
-		timeline.add(incomingTimeline);
+		var timeline = new TimelineMax({ delay: 1 });
+		timeline.add(incoming.show(texts, textsOptions), 0);
+		timeline.add(incoming.show(speezTexts, speezOptions), '+=' + 1);
 	}
 
 	function handleSpeedy(data){
 		console.log('handleSpeedy:', data);
-		stage.game.boards = data.boards;
 		achievementBoard.hide();
 
-		timer.disappear();
 		var texts = [
 			{ text: '3', sound: 'countdown/3' },
 			{ text: '2', sound: 'countdown/2' },
@@ -276,40 +244,34 @@ var stageState;
 				name: 'numericIncoming',
 				backRadius: 400,
 			},
-			complete: function(){
-				incoming.show(speezTexts, speezOptions);
-			},
 			timeScale: 1.7,
 		};
-		var incomingTimeline = incoming.show(texts, textsOptions);
 
 		var timeline = new TimelineMax();
 		timeline.add(function(){
 			rain.active = false;
 		});
-		_.each(boards, function(board){
-			timeline.add(board.disappear(), 0);
-		});
-		_.each(playersIcons, function(icon){
-			timeline.add(icon.disappear(), 0);
-		});
-		timeline.add(drawBoards);
-		timeline.add(incomingTimeline, '+=' + 1);
-
+		timeline.add(timer.disappear(), 0);
+		timeline.add(_.invoke(boards, 'disappear'), 0);
+		timeline.add(_.invoke(playersIcons, 'disappear'), 0);
+		timeline.add(incoming.show(texts, textsOptions), '+=' + 1);
+		timeline.add(incoming.show(speezTexts, speezOptions), '+=' + 1);
 	}
 
-	function handlePlay(){
+	function handlePlay(data){
+		console.log('handlePlay:', data);
+		stage.game.boards = data;
+		
 		achievementBoard.show();
 
+		drawBoards();
 		var timeline = new TimelineMax({  });
 		timeline.add(function(){
 			rain.active = true;
 		});
 		timeline.add(setBoards(), 0);
 		timeline.add(timer.appear(), 0);
-		_.each(playersIcons, function(icon){
-			timeline.add(icon.appear(), 0);
-		});
+		timeline.add(_.invoke(playersIcons, 'appear'), 0);
 	}
 
 	function handleCardBoard(data){
@@ -345,21 +307,52 @@ var stageState;
 	function setPlayerCards(icon, player){
 		if(player.cardCount === 5){
 			icon.flash(0.5, 0x00ee00);
-			icon.setCards(player.cardCount / stage.game.cardCount);
 		} else if(player.cardCount === 1){
 			icon.flash(0.2, 0xee0000);
-			icon.setCards(1);
-		} else {
-			icon.setCards(player.cardCount / stage.game.cardCount);
+		} else if(player.cardCount === 0){
+			icon.flash(0, 0x1e1e1e);
 		}
+		icon.setCards(1 - player.cardCount / stage.game.cardCount);
 	}
 
 	function handleWinner(data){
 		console.log('handleWinner:', data);
 		stage.game.winner = data.winner;
 		stage.players[data.winner].victories++;
-		timerBall.expand(handleWinnerTimerBallExpand);
 		achievementBoard.hide();
+
+		var texts = [ 
+			{ text: 'WINNER', sound: '' }, 
+		];
+		var winnerOptions = {
+			isTexts: true,
+			delay: 1,
+			size: 300,
+			delayBetween: 1,
+			effectOptions: {
+				name: 'speezIncoming',
+				backRadius: 650,
+			},
+			format: {
+				font: "bold 150px Montserrat",
+		        fill: "#111111",
+		        align: "center",
+			},
+			timeScale: 0.9,
+		}
+		var incomingTimeline = incoming.show(texts, winnerOptions);
+
+		
+		var timeline = new TimelineMax();
+		timeline.add(function(){ rain.active = false; });
+		timeline.add(timer.disappear());
+		timeline.add(_.invoke(boards, 'disappear'), 0);
+		timeline.add(_.invoke(playersIcons, 'disappear'));
+		timeline.add(incomingTimeline, '+=' + 1);
+		timeline.add(function(){ 
+			game.state.start('stageFinish');
+		}, '+=' + 1);
+		timelineEnd = timeline;
 	}
 
 	function handleAchieve(data){
@@ -377,17 +370,35 @@ var stageState;
 	}
 
 	function handleLeave(data){
+		console.log('handleLeave:', data);
 		if(timelineEnd){
-			cancelTimeout(timelineEnd);
+			timelineEnd.kill();
 		}
 		delete stage.players[data.id];
 		if(_.keys(stage.players).length !== 0){
 			return;
 		}
 		// stop the game if there are no players
-		incoming.stop();
-		timerBall.expand(handleTimerBallExpandLeave);
+		var timeline = new TimelineMax();
+		timeline.add(incoming.stop());
+		timeline.add(timer.disappear());
+		timeline.add(function(){ rain.active = false; });
+		timeline.add(_.invoke(boards, 'disappear'), 0);
+		timeline.add(_.invoke(playersIcons, 'disappear'));
+		timeline.add(
+			common.tweenStageColor(0xffffff, function(){
+				_.delay(function(){ 
+					game.state.start('lobby');
+				}, 1000);
+			}), 
+		'+=' + 1);
+		
 		Audio.instance.stop('fx');
+	}
+
+	function handleNoMoves(data){
+		console.log('handleNoMoves:', data);
+		timer.noMoves();
 	}
 
 	// other
@@ -419,7 +430,7 @@ var stageState;
 	function doSpeedy(){
 		if(config.isTest){
 			// handleWinner({ winner: 0 });
-			handleSpeedy({ boards: generateBoards() });
+			handleSpeedy();
 			return;
 		}
 		socket.emit('speed:stage:speedy', null, handleSpeedy);
@@ -458,18 +469,21 @@ var stageState;
 	function setTest(){
 		stage.game.boardCount = 2;
 		stage.game.boards = generateBoards();
+		stage.game.cardCount = 20;
 		stage.players = [];
 		stage.players[0] = {
 			id: 0,
 			name: 'Monkey',
 			points: 0,
 			icon: 0,
+			cardCount: 20,
 		}
 		stage.players[1] = {
 			id: 1,
 			name: 'Cow',
 			points: 0,
 			icon: 1,
+			cardCount: 20,
 		}
 
 		var boardId = 0;
@@ -482,7 +496,10 @@ var stageState;
 				default:
 					if(event.charCode >= 48 && event.charCode <= 57){
 						var number = event.charCode - 48;
-						handleCardBoard({ card: number.toString(), boardId: _.random(0, stage.game.boardCount - 1), playerId: _.random(0, 0), points: 100 });
+						var playerId = _.random(0, 0);
+						var player = stage.players[playerId];
+						player.cardCount--;
+						handleCardBoard({ card: number.toString(), boardId: _.random(0, stage.game.boardCount - 1), playerId: playerId, cardCount: player.cardCount, points: 100 });
 					}
 					return;
 			}
@@ -514,6 +531,7 @@ var stageState;
 			game.stage.backgroundColor = 0x1e1e1e;
 			drawGui();
 			
+			socket.on('speed:stage:noMoves', handleNoMoves);
 			socket.on('speed:stage:start', handleStart);
 			socket.on('speed:stage:cardBoard', handleCardBoard);
 			socket.on('speed:stage:cardOverlap', handleCardOverlap);
@@ -528,6 +546,7 @@ var stageState;
 		},
 
 		shutdown: function(){
+			socket.off('speed:stage:noMoves', handleNoMoves);
 			socket.off('speed:stage:leave', handleLeave);
 			socket.off('speed:stage:achieve', handleAchieve);
 			socket.off('speed:stage:start', handleStart);
@@ -539,3 +558,11 @@ var stageState;
 	}
 
 })();
+
+
+
+
+
+
+
+

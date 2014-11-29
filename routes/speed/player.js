@@ -32,7 +32,7 @@ module.exports.join = function(req, stage) {
 	var playerData = _.pick(player, ['id', 'name', 'points']);
 	console.log(playerData);
 	stage.socket.emit('speed:stage:join', playerData);
-	req.io.respond(_.extend({ confirm: true }, playerData));
+	req.io.respond(_.extend({ confirm: true, stageId: stage.id }, playerData));
 	return player;
 }
 
@@ -101,12 +101,7 @@ module.exports.messages = {
 		})
 
 		// Getting stage load data
-		req.stage.randomizeBoards();
-		var boards = _.map(req.stage.boards, function(board) {
-			return _.pick(board, [ 'color', 'current' ]);
-		});
 		var stageData = _.pick(req.stage,  [ 'cardCount', 'boardCount' ]);
-		stageData = _.extend(stageData, { boards: boards });
 		req.stage.socket.emit('speed:stage:load', stageData);
 	},
 
@@ -138,6 +133,10 @@ module.exports.messages = {
 				}
 			});
 			req.stage.socket.emit('speed:stage:winner', { winner: win });
+			return;
+		}
+		if(!req.stage.isAnyMoveExist()){
+			req.stage.socket.emit('speed:stage:noMoves');
 		}
 	},
 
@@ -146,6 +145,9 @@ module.exports.messages = {
 		data = _.extend(data, { handId: req.data.handId, overlapId: req.data.overlapId })
 		req.stage.socket.emit('speed:stage:cardOverlap', { playerId: req.player.id, points: data.points, cardCount: req.player.cardCount });
 		req.io.respond(data);
+		if(!req.stage.isAnyMoveExist()){
+			req.stage.socket.emit('speed:stage:noMoves');
+		}
 	},
 
 	next: function(req){

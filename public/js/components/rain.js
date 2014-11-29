@@ -17,8 +17,8 @@ com.speez.components.Rain = (function(){
 			heightMax: 200,
 			color: 0xc6c6c6,
 			targetY: 1000,
-			speedMin: 0.7,
-			speedMax: 0.7,
+			speedMin: 0.6,
+			speedMax: 0.6,
 		}, options);
 		this.options = options;
 	    

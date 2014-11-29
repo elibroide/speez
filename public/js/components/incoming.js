@@ -9,6 +9,8 @@ com.speez.components.Incoming = (function(){
 		
 		Phaser.Sprite.call(this, game, x, y);
 		game.add.existing(this);
+
+		this.timelines = [];
 	}
 
 	// Constructors
@@ -17,12 +19,17 @@ com.speez.components.Incoming = (function(){
 
 	// private methods
 
-	function complete(options, wrapper){
-		this.timeline.kill();
+	function complete(options, wrapper, timeline){
+		this.timelines.splice(this.timelines.indexOf(timeline), 1);
+		timeline.kill();
 		wrapper.destroy();
 		if(options.complete){
 			options.complete();
 		}
+	}
+
+	function stopComplete(){
+		this.destroy();
 	}
 
 	// public methods
@@ -43,11 +50,12 @@ com.speez.components.Incoming = (function(){
 	}
 
 	Incoming.prototype.stop = function() {
-		if(this.timeline) {
-			this.timeline.kill();
-		}
-		var timeline = new TimelineLite();
+		_.each(this.timelines, function(timeline){
+			timeline.kill();
+		});
+		var timeline = new TimelineLite({ onComplete: stopComplete, onCompleteScope: this });
 		timeline.to(this, 1, { alpha: 0 });
+		return timeline;
 	};
 
 	Incoming.prototype.show = function(items, options) {
@@ -89,7 +97,8 @@ com.speez.components.Incoming = (function(){
 		var incomingEffect = new com.speez.components.IncomingEffect(options.effectOptions);
 		wrapper.addChild(incomingEffect);
 
-    	var timeline = new TimelineMax({ onComplete: complete, onCompleteScope: this, onCompleteParams: [ options, wrapper ] });
+    	var timeline = new TimelineMax({ onComplete: complete, onCompleteScope: this });
+    	timeline.vars.onCompleteParams = [ options, wrapper, timeline ];
 
     	for (var i = 0; i < items.length; i++) {
     		var item = items[i];
@@ -123,6 +132,7 @@ com.speez.components.Incoming = (function(){
     	};
     	timeline.timeScale(options.timeScale);
     	this.timeline = timeline;
+    	this.timelines.push(timeline);
     	return timeline;
 	};
 

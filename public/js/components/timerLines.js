@@ -11,6 +11,8 @@ com.speez.components.TimerLines = (function(){
 			color: 0xc5c5e5,
 			isLeft: false,
 			startDelay: 2,
+			noMovesTime: 1,
+			disappearTime: 1,
 		}, options);
 		this.options = options;
 	    
@@ -51,6 +53,8 @@ com.speez.components.TimerLines = (function(){
 		this.countTimeline = createCounting.call(this);
 		this.countTimeline.pause();
 		this.countTimeline.progress(1);
+
+		this.events.onDestroy.add(onDestroy, this);
 	}
 
 	// Constructors
@@ -66,13 +70,17 @@ com.speez.components.TimerLines = (function(){
 
 	// private methods
 
+	function onDestroy(){
+		this.countTimeline.kill();
+	}
+
 	function appearComplete(){
 		this.state = TimerLines.STATE_PLAY;
 		this.count();
 	}
 
-	function createComplete(){
-		if(this.state !== TimerLines.STATE_PLAY){
+	function countComplete(bypass){
+		if(this.state !== TimerLines.STATE_PLAY && !bypass){
 			return;
 		}
 
@@ -87,7 +95,7 @@ com.speez.components.TimerLines = (function(){
 	}
 
 	function createCounting(){
-		var timeline = new TimelineMax({ onComplete: createComplete, onCompleteScope: this });
+		var timeline = new TimelineMax({ onComplete: countComplete, onCompleteScope: this });
 		timeline.to(this.leftLine.graphicsData[0].points, this.options.time, { '1': this.options.height, ease: Linear.easeNone }, 0);
 		timeline.to(this.rightLine.graphicsData[0].points, this.options.time, { '1': this.options.height, ease: Linear.easeNone }, 0);
 		return timeline;
@@ -105,7 +113,11 @@ com.speez.components.TimerLines = (function(){
 	};
 
 	TimerLines.prototype.disappear = function() {
+		this.countTimeline.pause();
 		this.state = TimerLines.STATE_FINISH;
+		var timeline = new TimelineMax({ });
+		timeline.to(this.countTimeline, this.options.disappearTime, { progress: 1 });
+		return timeline;
 	};
 
 	TimerLines.prototype.count = function(options) {
@@ -127,6 +139,14 @@ com.speez.components.TimerLines = (function(){
 		// return
 		timeline.add(this.count.bind(this), 2);
 		this.setCardTimeline = timeline;
+		return timeline;
+	};
+
+	TimerLines.prototype.noMoves = function() {
+		this.countTimeline.pause();
+		this.state = TimerLines.STATE_FINISH;
+		var timeline = new TimelineMax({ onComplete: countComplete, onCompleteScope: this, onCompleteParams: [true] });
+		timeline.to(this.countTimeline, this.options.noMovesTime, { progress: 1 });
 		return timeline;
 	};
 

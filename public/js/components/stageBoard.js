@@ -32,12 +32,11 @@ com.speez.components.StageBoard = (function(){
 		game.add.existing(this);
 
 		this.rotateSpeed = options.rotateSpeed / options.radius;
-		console.log(this.rotateSpeed);
 
 		// Background
 		this.background = game.add.graphics();
 		this.background.beginFill(this.options.diffuseColor);
-		this.background.lineStyle(2, this.options.color, 1, [5]);
+		this.background.lineStyle(5, this.options.color, 1, [10]);
 		this.background.drawCircle(0,0, this.options.radius);
 		this.background.circle = this.background.graphicsData[0];
 		this.background.colorChange = common.graphicsColorChange(0);

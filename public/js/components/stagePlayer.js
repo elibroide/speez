@@ -32,6 +32,9 @@ com.speez.components.StagePlayer = (function(){
 
 		    appearTime: 0.5,
 		    disappearTime: 0.5,
+
+		    lineWidth: 100,
+		    lineHeight: 4,
 		}, options);
 		this.options = options;
 		options.nameFormat.fill = '#' + common.toRgbHex(options.color);
@@ -42,17 +45,15 @@ com.speez.components.StagePlayer = (function(){
 	    Phaser.Sprite.call(this, game, x, this.options.disappearY);
 
 	    var lineY = 40;
-	    var lineWidth = 100;
-	    var lineHeight = 4;
 	    var radius = 50;
 	    this.background = new Phaser.Graphics(game, 0, lineY);
 	    this.background.beginFill(this.options.offColor);
-	    this.background.drawRoundedRect(-lineWidth, -lineHeight, lineWidth * 2, lineHeight * 2, radius);
+	    this.background.drawRoundedRect(-this.options.lineWidth, -this.options.lineHeight, this.options.lineWidth * 2, this.options.lineHeight * 2, radius);
 	    this.addChild(this.background);
 
 	    this.foreground = new Phaser.Graphics(game, 0, lineY);
 	    this.foreground.beginFill(this.options.color);
-	    this.foreground.drawRoundedRect(-lineWidth, -lineHeight, lineWidth * 2, lineHeight * 2, radius);
+	    this.foreground.drawRoundedRect(-this.options.lineWidth, -this.options.lineHeight, this.options.lineWidth * 2, this.options.lineHeight * 2, radius);
 	    this.foreground.colorChange = common.graphicsColorChange(0);
 	    this.addChild(this.foreground);
 
@@ -166,7 +167,7 @@ com.speez.components.StagePlayer = (function(){
 	};
 
 	StagePlayer.prototype.setCards = function(progress) {
-		this.foreground.scale.set(progress, 1);
+		this.foreground.graphicsData[0].points[2] = this.options.lineWidth * 2 * progress;
 	};
 
 	StagePlayer.prototype.flash = function(speed, color) {

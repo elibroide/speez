@@ -51,6 +51,7 @@ com.speez.components.PlayerBoard = (function(){
 	    this.text.anchor.set(0.5, 0.5);
 	    this.text.colorChange = common.textColorChange();
 		this.text.visible = false;
+		this.text.text = this.isLeft ? '\uf060' : '\uf061';
 	    this.addChild(this.text);
 
 		this.area = new com.LayoutArea(x, y, width, height, { isDebug: false });
@@ -61,13 +62,6 @@ com.speez.components.PlayerBoard = (function(){
 			alignHorizontal: this.isLeft ? Layout.ALIGN_LEFT : Layout.ALIGN_RIGHT,
 		});
 
-		this.arrowTimeline = new TimelineMax({ repeat: -1 });
-		this.arrowTimeline.to(this.text, options.arrowTime, { x: width * 0.5 + (this.isLeft ? -10 : 10), ease: Back.easeOut });
-		this.arrowTimeline.to(this.text, options.arrowTime, { x: width * 0.5, ease: Back.easeOut });
-
-		_.delay(function(){
-			this.text.text = this.isLeft ? '\uf060' : '\uf061';
-		}.bind(this), 2000);
 
 		this.effectOptions = {
 			count: 3,
@@ -88,6 +82,14 @@ com.speez.components.PlayerBoard = (function(){
 
 	// private methods
 
+	function animateArrow(){
+		var start = this.options.radius * 0.5 + (this.isLeft ? -5 : 5)
+		this.arrowTimeline = new TimelineMax({ repeat: -1 });
+		this.arrowTimeline.fromTo(this.text, this.options.arrowTime, 
+			{ x: start },
+			{ x: this.options.radius * 0.5 + (this.isLeft ? -20 : 20), ease: Back.easeOut });
+		this.arrowTimeline.to(this.text, this.options.arrowTime, { x: start, ease: Back.easeOut });
+	}
 
 	// public methods
 
@@ -119,11 +121,13 @@ com.speez.components.PlayerBoard = (function(){
 			name: 'board' + this.options.color.toString(16),
 			blurColor: common.addHsl(this.options.color, 0.1),
 		}, this.effectOptions));
-		this.addChildAt(incomingEffect, 0);
-
-		incomingEffect.animate(this.animationOptions);
 		incomingEffect.x = this.background.x;
 		incomingEffect.y = this.background.y;
+		this.addChildAt(incomingEffect, 0);
+
+		var timeline = incomingEffect.animate(this.animationOptions);
+		timeline.timeScale(2.2);
+		return timeline;
 	};
 
 	PlayerBoard.prototype.setProximity = function(isProximity) {
@@ -139,11 +143,20 @@ com.speez.components.PlayerBoard = (function(){
 
 	PlayerBoard.prototype.appear = function() {
 		var timeline = new TimelineLite();
-		timeline.to([this.background, this.backgroundOutline], this.options.appearTime, { x: this.isLeft ? -(this.options.gap) : (this.options.radius + this.options.gap), ease: Sine.easeOut })
-		timeline.add(this.setProximity(true));
-		timeline.add(this.cancelProximity());
-		timeline.add(this.setProximity(true));
-		timeline.add(this.cancelProximity());
+		timeline.fromTo([this.background, this.backgroundOutline ], this.options.appearTime, 
+			{ x: this.isLeft ? -(this.options.radius + this.options.gap)*2 : (this.options.radius + this.options.gap)*2 },
+			{ x: this.isLeft ? -(this.options.gap) : (this.options.radius + this.options.gap), ease: Sine.easeOut }
+		);
+		timeline.add(animateArrow.bind(this));
+		return timeline;
+	};
+
+	PlayerBoard.prototype.disappear = function() {
+		var timeline = new TimelineLite();
+		timeline.fromTo([this.background, this.backgroundOutline ], this.options.appearTime, 
+			{ x: this.isLeft ? -(this.options.gap) : (this.options.radius + this.options.gap) },
+			{ x: this.isLeft ? -(this.options.radius + this.options.gap)*2 : (this.options.radius + this.options.gap)*2, ease: Sine.easeIn }
+		);
 		return timeline;
 	};
 

@@ -8,7 +8,7 @@ var routes = {
 	player: require('./player'),
 }
 
-var games = _.shuffle(_.range(1, 10));
+var games = _.shuffle(_.range(1000, 10000));
 var gameId = 'brobro.speez';
 var runningGames = {};
 
@@ -32,6 +32,7 @@ function connect(){
 		delete this.player;
 	}
 	this.leaveStage = function(){
+		returnSlot(this.stage.id);
 		this.leave(this.stage.roomId);
 		delete this.stage;
 	}
@@ -41,7 +42,6 @@ function connect(){
 function disconnect(){
 	console.log('Disconnect');
 	if(this.stage){
-		returnSlot(this.stage.id);
 		routes.stage.disconnect(this);
 	} else if(this.player){
 		routes.player.disconnect(this);

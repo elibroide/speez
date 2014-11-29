@@ -14,6 +14,9 @@
 
 	    this.options.game.add.existing(this);
 
+	    if(!this.options.isDebug){
+	    	return;
+	    }
 
 	    this.graphics = this.options.game.add.graphics();
 	    this.graphics.beginFill(0xcc0000);
@@ -63,6 +66,13 @@
 
 	    this.layout.add(this);
 
+	    this.changesArray = [];
+	    this.preUpdate = this.performChanges;
+
+	    if(!this.options.isDebug){
+	    	return;
+	    }
+
 	    this.graphics = this.game.add.graphics();
 	    this.graphics.beginFill(0x00cc00);
 	    this.graphics.drawRect(0, 0, this.options.width, this.options.height);
@@ -78,9 +88,6 @@
 		this.graphics.drawRect(graphWidth - size, graphHeight - size, size, size);
 	    this.addChild(this.graphics);
 	    this.graphics.visible = this.options.isDebug;
-
-	    this.changesArray = [];
-	    this.postUpdate = this.performChanges; 
 	}
 
 	LayoutArea.prototype.onAttached = function(obj) {
@@ -114,7 +121,6 @@
 	}
 
 	LayoutArea.prototype.performChangeAttach = function(item){
-
 		// Check if still valid
 		var found = this.getAttached(item.obj);
 		if(!found) {
@@ -130,6 +136,10 @@
 			item.data.scaleX ? item.data.scaleX : item.obj.scale.x, 
 			item.data.scaleY ? item.data.scaleY : item.obj.scale.y
 		);
+
+		if(item.options.onResize){
+			item.options.onResize.call(this, item);
+		}
 	}
 
 	LayoutArea.prototype.setScale = function(item, data){
@@ -138,7 +148,7 @@
 		} else {
 			this.isUpdate = 0
 		}
-		this.changesArray.push({ obj: item.obj, data: data });
+		this.changesArray.push(_.extend(item, { data: data }));
 	}
 
 	LayoutArea.prototype.onResize = function(scale){

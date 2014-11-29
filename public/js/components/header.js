@@ -18,6 +18,7 @@ com.speez.components.Header = (function(){
 		    },
 		    textColor: 0xffffff,
 		    color: 0xffffff,
+		    alpha: 1,
 		}, options);
 		this.options = options;
 		this.options.format.fill = '#' + common.toRgbHex(options.textColor);
@@ -27,6 +28,7 @@ com.speez.components.Header = (function(){
 	    game.add.existing(this);
 
 	    this.background = new ColorBox(0, 0, width, height, options.color);
+	    this.background.alpha = this.options.alpha;
 	    this.addChild(this.background);
 
 		this.headerArea = new com.LayoutArea(0, 0, width, height, {
@@ -55,10 +57,14 @@ com.speez.components.Header = (function(){
 		this.headerArea.attach(this.left, { 
 			mode: Layout.PROPORTIONAL_INSIDE,
 			alignHorizontal: Layout.ALIGN_LEFT,
+			width: 10,
+			height: height,
 		});
 
 		this.right = game.add.sprite();
 		this.headerArea.attach(this.right, { 
+			width: 10,
+			height: height,
 			mode: Layout.PROPORTIONAL_INSIDE,
 			alignHorizontal: Layout.ALIGN_RIGHT,
 		});
@@ -80,7 +86,16 @@ com.speez.components.Header = (function(){
 	};
 
 	Header.prototype.add = function(items, location, options) {
-		
+	};
+
+	Header.prototype.addLeft = function(items, options) {
+		options = _.extend({
+			marginLeft: 10,
+			marginRight: 10,
+			marginTop: 10,
+			marginDown: 10,
+		}, options);
+		this.left.addChild(items);
 	};
 
 	Header.prototype.tweenTitle = function(text, color, time) {

@@ -39,7 +39,7 @@ Stage.prototype.__proto__ = events.EventEmitter.prototype;
 
 Object.defineProperty(Stage, "CARD_BOARD_POINTS_ANY_THRESHOLD", { value: 3000 });
 Object.defineProperty(Stage, "CARD_BOARD_POINTS_THRESHOLD", { value: 1000 });
-Object.defineProperty(Stage, "CARD_PUT_TIMEOUT", { value: 1000 });
+Object.defineProperty(Stage, "CARD_PUT_TIMEOUT", { value: 0 });
 Object.defineProperty(Stage, "MAX_PLAYERS", { value: 5 });
 
 Object.defineProperty(Stage, "STATE_LOBBY", { value: 'lobby' });
@@ -128,10 +128,8 @@ Stage.prototype.setConfig = function(config) {
 	this.boardCount = config.boardCount;
 	this.cardCount = config.cardCount;
 	this.boards = [];
-	this.colors = _.shuffle(this.colors);
 	for (var i = 0; i < this.boardCount; i++) {
 		this.boards.push({
-			color: this.colors[i],
 			current: 0,
 			currentPlayer: null,
 			currentTimestamp: null,
@@ -144,17 +142,7 @@ Stage.prototype.setConfig = function(config) {
 };
 
 Stage.prototype.isCanSpeedy = function() {
-	return Date.now() - this.lastCardTime > Stage.CARD_PUT_TIMEOUT;
-};
-
-Stage.prototype.speedy = function() {
-	// Saving history stuff
-	this.saveLastPlay();
-	this.saveSpeedy();
-	// setting speedy mode
-	this.randomizeBoards();
-	this.emit(Stage.EVENT_SPEEDY);
-	this.state = Stage.STATE_SPEEDY;
+	return Date.now() - this.lastCardTime > Stage.CARD_PUT_TIMEOUT && this.state === Stage.STATE_PLAY;
 };
 
 Stage.prototype.saveSpeedy = function() {
@@ -170,6 +158,15 @@ Stage.prototype.saveSpeedy = function() {
 
 Stage.prototype.play = function() {
 	this.state = Stage.STATE_PLAY;
+	// setting speedy mode
+	this.randomizeBoards();
+};
+
+Stage.prototype.speedy = function() {
+	this.state = Stage.STATE_SPEEDY;
+	this.saveLastPlay();
+	this.saveSpeedy();
+	this.emit(Stage.EVENT_SPEEDY);
 };
 
 Stage.prototype.setLoaded = function(player) {
@@ -205,7 +202,6 @@ Stage.prototype.startGame = function() {
 	this.restoreReady();
 	this.firstPlayerGame = null;
 	this.history = [];
-	this.saveSpeedy();
 	this.lastCardTime = 0;
 	this.state = Stage.STATE_SPEEDY;
 	this.emit(Stage.EVENT_START);
@@ -216,6 +212,7 @@ Stage.prototype.playCardBoard = function(player, card, boardId) {
 		return { confirm: false, reason: 'not in play' };
 	}
 	var board = this.boards[boardId];
+	console.log('play', card, 'to', board.current);
 	if(board === undefined){
 		return {confirm: false, reason: 'no board'};
 	}
@@ -264,11 +261,15 @@ Stage.prototype.getCard = function() {
 };
 
 Stage.prototype.randomizeBoards = function() {
+	var colors = _.shuffle(this.colors);
+	var tries = 100;
 	do{
 		_.each(this.boards, function(board){
+			board.color = colors.pop();
 			board.current = _.random(0,9);
-		})
-	} while(!this.isMoveExist());
+		});
+		tries--;
+	} while(!this.isMoveExist() && tries > 0);
 };
 
 Stage.prototype.isMoveExist = function() {
@@ -287,6 +288,30 @@ Stage.prototype.isMoveExist = function() {
 			};
 		};
 	}, true);
+	return found;
+};
+
+Stage.prototype.isAnyMoveExist = function() {
+	if(this.isMoveExist()){
+		return true;
+	}
+	var found = false;
+	this.eachPlayer(function(player){
+		for (var i = 0; i < player.hand.length; i++) {
+			if(player.hand[i] === undefined){
+				continue;
+			}
+			for (var j = 0; j < player.hand.length; j++) {
+				if(player.hand[j] === undefined || i === j){
+					continue;
+				}
+				if(player.hand[i] === player.hand[j]){
+					found = true;
+					return false;
+				}
+			};
+		};
+	});
 	return found;
 };
 

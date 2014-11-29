@@ -1,5 +1,7 @@
 var _ = require('underscore');
-var express = require('express.io');
+var express = require('express.io', {
+    'heartbeat timeout': 100,
+});
 var path = require('path');
 var favicon = require('static-favicon');
 var logger = require('morgan');

@@ -2,9 +2,12 @@ extends layout
 
 block scripts
 	script(src='/socket.io/socket.io.js')
-	script(src='/js/external/jquery.min.js')
+	script(src='/js/external/jquery.min.js') 
 	script(src='/js/external/underscore-min.js')
 	script(src='/js/external/signals.min.js')
+	script(src='/js/external/mobile-detect.min.js') 
+	script(src='/js/external/CanvasInput.min.js') 
+	script(src='/js/external/jquery.placeholder.js') 
 
 	// greensock
 	script(src='/js/external/ColorPropsPlugin.min.js')
@@ -17,6 +20,9 @@ block scripts
 	script(src='/js/client.js')
 	script(src='/js/common.js')
 
+	// Network
+	script(src='/js/network.js')
+
 	// Layout
 	script(src='/js/layout/layout.js')
 	script(src='/js/layout/layoutPhaser.js')
@@ -25,6 +31,8 @@ block scripts
 	script(src='/js/audio.js')
 
 	// Components
+	script(src='/js/components/blockNumber.js')
+	script(src='/js/components/logo.js')
 	script(src='/js/components/rain.js')
 	script(src='/js/components/timerLines.js')
 	script(src='/js/components/incomingEffect.js')
@@ -50,12 +58,16 @@ block scripts
 	script(src='/js/states/preload.js')
 	script(src='/js/states/main.js')
 	script(src='/js/states/lobby.js')
+	script(src='/js/states/lobbyPlayer.js')
 	script(src='/js/states/stage.js')
 	script(src='/js/states/stageFinish.js')
 	script(src='/js/states/player.js')
 	script(src='/js/states/playerFinish.js')
 
 block content
+	h1(style="display:none") 123
+	h2(style="display:none") fdsa
+	h3(style="display:none") fdsa
 	//- .row
 	//- 	.small-10.columns.text-center.small-centered
 	//- 		h1.header Speez

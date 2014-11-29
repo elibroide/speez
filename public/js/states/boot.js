@@ -6,11 +6,7 @@ var bootState = (function(){
 		//// Local
 		console.log('Trying to connect to ' + config.address)
 
-		socket = io.connect(config.address);
-		socket.off = socket.removeListener;
-		socket.on('common.ping', function(){
-			console.log('pong');
-		});
+		network = new Network();
 	}
 
 	function setScale(){

@@ -34,7 +34,7 @@ com.speez.components.Card = (function(){
 			winnerScale: 5,
 			overlapCompleteTime: 0.4,
 			format: {
-		        font: "100px arial",
+		        font: "100px Montserrat",
 		        align: "center"
 		    },
 		    isNew: false,
@@ -164,7 +164,7 @@ com.speez.components.Card = (function(){
 				return Card.THRESHOLD_LEFT_BOTTOM;
 			}
 		}
-		return Card.THRESHOLD_NONE;
+		return undefined;
 	}
 
 	// public methods
@@ -181,7 +181,7 @@ com.speez.components.Card = (function(){
 		var threshold = getThreshold.bind(this)();
 		if(this.thresholdHit !== threshold){
 			this.thresholdHit = threshold;
-			if(threshold === Card.THRESHOLD_NONE){
+			if(threshold === undefined){
 				this.proximity.dispatch(this);
 			} else {
 				this.proximity.dispatch(this, threshold);
@@ -191,7 +191,7 @@ com.speez.components.Card = (function(){
 				}
 			}
 		}
-		if(this.thresholdHit !== Card.THRESHOLD_NONE){
+		if(this.thresholdHit !== undefined){
 			return;
 		}
 		var overlap = Math.floor(this.currentRatioY * 5);

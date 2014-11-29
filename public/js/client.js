@@ -5,11 +5,12 @@ var com;
     com = $.extend({ speez: {} }, com);
 })(window);
 
-var orientation = 'portrait';
-var originalWidth = 640;
-var originalWidthCenter = originalWidth * 0.5;
-var originalHeight = 960;
-var originalHeightCenter = originalHeight * 0.5;
+var detector;
+var gameOrientation = 'portrait';
+var originalWidth;
+var originalWidthCenter;
+var originalHeight;
+var originalHeightCenter;
 var config;
 var socket;
 var game;
@@ -21,15 +22,29 @@ var Layout = com.Layout;
 var version = '0.0.0-10';
 
 function init(){
+    console.log('ver: ' + version);
 
-    console.log('ver: ' + version, common.toRgb(0xffffff));
-
+    // set config
     config = {
         dpr: window.devicePixelRatio,
-        width: originalWidth,
-        height: originalHeight,
+        width: 640,
+        height: 960,
         isLocal: true,
     }
+    
+    // set size
+    detector = new MobileDetect(window.navigator.userAgent);
+    if(detector.mobile()) {
+        originalWidth = config.height;
+        originalHeight = config.width;
+    } else {
+        originalWidth = config.width;
+        originalHeight = config.height;
+    }
+    originalWidthCenter = originalWidth * 0.5;
+    originalHeightCenter = originalHeight * 0.5;
+
+    // set address
     config.address = document.URL;
     if(config.address.indexOf('file') === 0){
         config.address = 'http://speez.herokuapp.com/';
@@ -40,7 +55,7 @@ function init(){
     // initiate singletones
     var audio = new Audio();
 
-    game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.CANVAS, 'container');
+    game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.CANVAS, '');
 
     game.state.add('boot', bootState);
     game.state.add('preload', preloadState);
@@ -48,6 +63,7 @@ function init(){
     game.state.add('player', playerState);
     game.state.add('playerFinish', playerFinishState);
     game.state.add('lobby', lobbyState);
+    game.state.add('lobbyPlayer', lobbyPlayerState);
     game.state.add('stage', stageState);
     game.state.add('stageFinish', stageFinishState);
     game.state.start('boot');

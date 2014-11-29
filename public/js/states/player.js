@@ -3,7 +3,7 @@
 var playerState = (function(){
 
 	// data
-	var lastCards;
+	var state = 'start';
 
 	// gui
 	var footer;
@@ -27,6 +27,7 @@ var playerState = (function(){
 	var nextCard;
 	var overlapCard;
 	var sightedCards;
+	var heldCards = [];
 
 	function drawGui(){
 		// sizes
@@ -41,6 +42,36 @@ var playerState = (function(){
 		cardHeight = gameHeight / 5;
 		cardWidth = originalWidth - boardWidth * 2;
 
+		// Content
+		playerArea = new com.LayoutArea(boardWidth, headerHeight, cardWidth, gameHeight, { isDebug: false });
+		container = game.add.sprite();
+		playerArea.attach(container, { width: cardWidth, height: gameHeight });
+
+		hand = [];
+		for(var i = 0; i < 5; i++){
+			var index = i % 5;
+			var card = drawCard(player.game.hand[index], index, true, i > player.game.cardCount);
+			hand[index] = card;
+		}
+
+		// header
+		header = new com.speez.components.Header(originalWidth, headerHeight, {
+			text: getHeaderText(),
+			color: 0x1E1E1E,
+		});
+		header.alpha = 0;
+		TweenLite.to(header, 1, {alpha: 1});
+
+		// footer
+		var barHeightGap = 10;
+		footer = new com.speez.components.PlayerCardBar(0, originalHeight - (barHeight - barHeightGap), originalWidth, barHeight - barHeightGap);
+		setFooter();
+
+	 	fullScreen = new com.speez.components.PlayerFullScreen(0, 0, originalWidth, originalHeight);
+	}
+
+	function drawBoards(){
+		destroyBoards();
 		boards = [];
 		colors = [];
 		for (var i = 0; i < player.game.boards.length; i++) {
@@ -68,41 +99,15 @@ var playerState = (function(){
 				boards[3] = new com.speez.components.PlayerBoard(boardWidthRight, boardMiddle, boardWidth, gameHeightCenter, colors[3]);
 				break;
 		}
+	}
 
-		// Content
-		playerArea = new com.LayoutArea(boardWidth, headerHeight, cardWidth, gameHeight, { isDebug: false });
-		container = game.add.sprite();
-		playerArea.attach(container, { width: cardWidth, height: gameHeight });
-
-		hand = [];
-		for(var i = 0; i < 5; i++){
-			var index = i % 5;
-			var card = drawCard(player.game.hand[index], index, true, i > player.game.cardCount);
-			hand[index] = card;
+	function destroyBoards(){
+		if(!boards){
+			return;
 		}
-
-		// animation start
-		var timeline = new TimelineLite({ delay: 1 });
-		timeline.add(_.invoke(boards, 'appear', 0x333333), 0, null, 0);
-		timeline.add(_.invoke(hand, 'startCard'), 0, null, 0);
-		timeline.add(_.invoke(hand, 'appearCard'), null, null, 0.2);
-		if(config.isTest){
-			timeline.timeScale(9);
-		}
-
-		// header
-		header = new com.speez.components.Header(originalWidth, headerHeight, {
-			text: getHeaderText(),
-			color: 0x1E1E1E,
+		_.each(boards, function(board){
+			board.destroy();
 		});
-		header.alpha = 0;
-		TweenLite.to(header, 1, {alpha: 1});
-
-		// footer
-		var barHeightGap = 10;
-		footer = new com.speez.components.PlayerCardBar(0, originalHeight - (barHeight - barHeightGap), originalWidth, barHeight - barHeightGap);
-
-	 	fullScreen = new com.speez.components.PlayerFullScreen(0, 0, originalWidth, originalHeight);
 	}
 
 	// handle gui
@@ -117,8 +122,11 @@ var playerState = (function(){
 	}
 
 	function handleCardPickedUp(card){
+		heldCards[card.index] = card;
 		Audio.instance.play('fx', 'card/pickup');
-		_.invoke(boards, 'setArrow');
+		if(state === 'play'){
+			_.invoke(boards, 'setArrow');
+		}
 		sightedCards = [];
 		_.each(hand, function(cardInHand){
 			if(!cardInHand || cardInHand === card || !cardInHand.faceup){
@@ -135,12 +143,13 @@ var playerState = (function(){
 	}
 
 	function handleCardPutDown(card){
+		delete heldCards[card.index];
 		_.invoke(boards, 'cancelArrow');
 		overlapCard = null;
 		_.each(sightedCards, function(sightedCard){
 			sightedCard.cancelOverlapSighted();
 		});
-		if(card.thresholdHit !== Card.THRESHOLD_NONE){
+		if(card.thresholdHit !== undefined && state === 'play'){
 			_.invoke(hand, 'enable', false);
 			placeCardBoard(card, card.thresholdHit)
 			Audio.instance.play('fx', 'card/placeBoard');
@@ -188,7 +197,9 @@ var playerState = (function(){
 		}
 		var targetCard = hand[overlap];
 		if(!targetCard || !targetCard.faceup || !compareCards(targetCard.card, card.card)){
-			_.invoke(boards, 'setArrow');
+			if(state === 'play'){
+				_.invoke(boards, 'setArrow');
+			}
 			return;
 		}
 		overlapCard = targetCard;
@@ -199,6 +210,9 @@ var playerState = (function(){
 	}
 
 	function handleCardProximity(card, threshold){
+		if(state !== 'play'){
+			return;
+		}
 		_.invoke(boards, 'cancelProximity');
 		if(threshold === undefined){
 			_.invoke(boards, 'setArrow');
@@ -213,16 +227,90 @@ var playerState = (function(){
 		}
 	}
 
+	function setPlay(){
+		state = 'play';
+		var keys = _.keys(heldCards);
+		if(keys.length === 0){
+			return;
+		}
+		if(overlapCard){
+			return;
+		}
+		_.each(keys, function(key){
+			var card = heldCards[key];
+			handleCardProximity(card, card.thresholdHit);
+		});
+	}
+
+	function setSpeedy(){
+		state = 'speedy';
+		var keys = _.keys(heldCards);
+		if(keys.length === 0){
+			return;
+		}
+		_.invoke(boards, 'cancelProximity');
+		_.invoke(boards, 'cancelArrow');
+		_.each(keys, function(key){
+			var card = heldCards[key];
+			card.cancelProximity();
+		});
+	}
+
 	// handling socket
 
 	function handleStart(data){
 		console.log('handleStart:', data);
 		drawGui();
+
+		// animation start
+		var timeline = new TimelineLite({ delay: 1 });
+		timeline.add(_.invoke(hand, 'startCard'), 0, null, 0);
+		timeline.add(_.invoke(hand, 'appearCard', false), null, null, 0.2);
+		if(config.isTest){
+			timeline.timeScale(9);
+		}
+
+		if(config.isTest){
+			var colors = _.shuffle([0xbf00d8, 0xd84100, 0xdbaf00, 0xa1ff00, 0x00c8cc, 0x0065bf]);
+			var testBoards = [];
+			testBoards[0] = { color: colors.pop()};
+			testBoards[1] = { color: colors.pop()};
+			testBoards[2] = { color: colors.pop()};
+			timeline.vars.onComplete = handlePlay;
+			timeline.vars.onCompleteParams = [testBoards];
+		}
 	}
 
 	function handlePlay(data){
 		console.log('handlePlay:', data);
+
+		player.game.boards = data;
+		drawBoards();
 		var timeline = new TimelineMax();
+		timeline.add(_.invoke(boards, 'appear', 0x333333));
+		timeline.add(setPlay, timeline.totalDuration() / 2);
+
+		if(config.isTest){
+			timeline.add(handleSpeedy, 5);
+		}
+	}
+
+	function handleSpeedy(data){
+		console.log('handleSpeedy:', data);
+
+		setSpeedy();
+		var timeline = new TimelineMax();
+		timeline.add(_.invoke(boards, 'disappear'));
+
+		if(config.isTest){
+			var colors = _.shuffle([0xbf00d8, 0xd84100, 0xdbaf00, 0xa1ff00, 0x00c8cc, 0x0065bf]);
+			var testBoards = [];
+			testBoards[0] = { color: colors.pop()};
+			testBoards[1] = { color: colors.pop()};
+			testBoards[2] = { color: colors.pop()};
+			timeline.vars.onComplete = handlePlay;
+			timeline.vars.onCompleteParams = [testBoards];
+		}
 	}
 
 	function handleWinner(data){
@@ -457,14 +545,11 @@ var playerState = (function(){
 	}
 
 	function setFooter(){
-		footer.setProgress(player.game.cardCount / player.game.cardTotal);
+		footer.setProgress(1 - player.game.cardCount / player.game.cardTotal);
 		if(player.game.cardCount !== 5 && player.game.cardCount !== 1){
 			return;
 		}
 		footer.flash(player.game.cardCount);
-		if(player.game.cardCount === 1){
-			footer.setProgress(1);
-		}
 		Audio.instance.play('fx', 'achievement/last' + player.game.cardCount);
 	}
 
@@ -544,6 +629,8 @@ var playerState = (function(){
 			common.tweenStageColor(0x1E1E1E, handleStageReady);
 
 			socket.on('speed:player:leave', handleLeave);
+			socket.on('speed:player:speedy', handleSpeedy);
+			socket.on('speed:player:play', handlePlay);
 			socket.on('speed:player:start', handleStart);
 			socket.on('speed:player:winner', handleWinner);
 			socket.on('speed:player:achieve', handleAchievement);
@@ -559,7 +646,9 @@ var playerState = (function(){
 		},
 
 		shutdown: function(){
+			socket.off('speed:player:speedy', handleSpeedy);
 			socket.off('speed:player:leave', handleLeave);
+			socket.off('speed:player:play', handlePlay);
 			socket.off('speed:player:start', handleStart);
 			socket.off('speed:player:achieve', handleAchievement);
 			socket.off('speed:player:winner', handleWinner);

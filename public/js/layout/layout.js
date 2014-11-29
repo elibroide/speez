@@ -130,8 +130,8 @@ var moduel = (function(window){
 	};
 
 	Layout.prototype.pin = function(obj, pinTo) {
-		this.unpin(obj);
-		var pin = new com.Layout.Pin(this, obj, pinTo);
+		// this.unpin(obj);
+		var pin = new Pin(this, obj, pinTo);
 		this.pinArray.push(pin);
 		if(this.pinAdded){
 			this.pinAdded(obj, pin);

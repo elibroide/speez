@@ -6,6 +6,7 @@ var preloadState = (function(){
 	var container;
 	var preloaderArea;
 	var textProgress;
+	var data;
 
 	function drawGui(){
         preloaderArea = new com.LayoutArea(0, 0, originalWidth, originalHeight);
@@ -16,8 +17,13 @@ var preloadState = (function(){
         textProgress = game.add.text(game.world.centerX, game.world.centerY, 'Preloading', { font: "100px Arial", fill: "#ffffff", align: "center" });
         textProgress.anchor.set(0.5);
 		container.addChild(textProgress);
+
+		data = { progress: 0 };
 	}
 
+	function updateProgress(){
+		textProgress.text = Math.ceil(data.progress) + "%";
+	}
 
 	return {
 		preload: function(){
@@ -32,6 +38,11 @@ var preloadState = (function(){
 
 			// gui
 			drawGui();
+
+			// images
+			game.load.image('bblogo', 'images/bros_logo.png');
+			game.load.image('logo', 'images/speez_logo_tagline.png');
+			game.load.image('beta', 'images/beta.png');
 
 			// Sounds
 			game.load.audio('button/down', ['audio/fx/button/down.mp3']);
@@ -78,7 +89,7 @@ var preloadState = (function(){
 		},
 
 		loadUpdate: function(){
-			textProgress.text = game.load.progress + "%";
+			TweenMax.to(data, 1, { progress: game.load.progress, onUpdate: updateProgress })
 		},
 
 		create: function(){
@@ -86,8 +97,8 @@ var preloadState = (function(){
             game.state.start('main');
 		},
 
-		render: function(){
-			
+		shutdown: function(){
+			TweenMax.killTweensOf(data);
 		}
 	}
 

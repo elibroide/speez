@@ -17,10 +17,19 @@ var lobbyState = (function(){
 
 	function drawGui(){
 		// header
-		var headerHeight = originalHeight * 0.125;
+		var headerHeight = 100;
 		header = new com.speez.components.Header(originalWidth, headerHeight, {
-			text: 'Lobby',
+			alpha: 0,
 		});
+		var headerButton = game.add.text(50, headerHeight * 0.5, '\uf04c', {
+			font: "40px FontAwesome",
+	        fill: "#000000",
+	        align: "center"
+		});
+		headerButton.anchor.set(0.5);
+	    headerButton.inputEnabled = true;
+	    headerButton.events.onInputDown.add(handleStageLeaveClicked);
+		header.addLeft(headerButton);
 
 		// Content
 		lobbyArea = new com.LayoutArea(0, 0, originalWidth, originalHeight, { isDebug: false });
@@ -30,29 +39,12 @@ var lobbyState = (function(){
 		// Lobby data
 		lobbyGroup = game.add.group();
 
-		// text
-		numberText = game.add.text(0, -150, "Waiting for players", {
-	        font: "24px Arial",
-	        fill: "#000000",
-	        align: "center"
-	    });
-	    numberText.anchor.set(0.5);
-	    lobbyGroup.add(numberText);
-
-	    // box
-		numberBox = new com.speez.components.ColorBox(0, -100, 150, 60, 0x000000, {
-			text: stage.id,
-			anchorX: 0.5,
-			anchorY: 0.5,
-		});
-		lobbyGroup.add(numberBox);
-
 	    // players
 	    playersIcons = [];
-	    var distance = 250;
+	    var distance = 200;
 	    var colors = [ 0xFF0000, 0x336699, 0xFFCC00, 0x00ff00 ]
 	    for(var i=0;i<4;i++){
-	    	var player = new PlayerLobby(-distance * 1.5 + i * distance, 50, {
+	    	var player = new PlayerLobby(-distance * 1.5 + i * distance, 0, 155, 80, {
 	    		readyColor: colors[i],
 	    	});
 	    	playersIcons.push(player);
@@ -61,21 +53,31 @@ var lobbyState = (function(){
 	    playersIcons.push(playersIcons.shift());
 
     	lobbyGroup.x = originalWidthCenter;
-    	lobbyGroup.y = originalHeightCenter;
+    	lobbyGroup.y = 210;
 		container.addChild(lobbyGroup);
 
-		container.alpha = 0;
-		header.alpha = 0;
-	}
+		var numberTextFormat = {
+			font: "22px Montserrat",
+	        fill: "#000000",
+	        align: "center"
+		}
+		numberText = game.add.text(originalWidthCenter, originalHeight - 30, 'GAME NUMBER', numberTextFormat);
+		numberText.anchor.set(0.5);
+		container.addChild(numberText);
 
-	function appearGui(){
-		var timeline = new TimelineLite();
-		timeline.to([container, header], 1, { alpha: 1 });
-	}
+		blockNumber = new com.speez.components.BlockNumber(originalWidthCenter - 260 / 2, originalHeight - 126, 260, 70, stage.id, {
+			format: {
+				font: "52px Montserrat",
+		        fill: "#ffffff",
+		        align: "center"
+			},
+			margin: 10,
+		});
+		container.addChild(blockNumber);
 
-	function disappearGui(){
-		var timeline = new TimelineLite();
-		timeline.to([container, header], 1, { alpha: 0 });
+		// common
+		common.addLogo('logo', lobbyArea);
+		common.addLogo('beta', lobbyArea);
 	}
 
 	// Various
@@ -102,6 +104,10 @@ var lobbyState = (function(){
 		btnBoardsCount.text.setText( 'Boards Count: ' + stage.game.boardCount);
 	}
 
+	function handleStageLeaveClicked() {
+		socket.emit('speed:stage:stageLeave', handleStageLeave);
+	}
+
 	// socket handlers
 
 	function handleIdentify(data){
@@ -110,21 +116,21 @@ var lobbyState = (function(){
 			players: [],
 		};
 		drawGui();
-		appearGui();
+		
 	}
 
 	function handleNextLobby(data) {
 		drawGui();
+
 		_.each(_.keys(stage.players), function(key){
 			var player = stage.players[key];
 			player.icon = getAvailableIcon();
 			playersIcons[player.icon].setPlayer(player);
 		});
-		appearGui();
 	}
 
 	function handleJoin(data){
-		console.log('speed:stage:join ' + JSON.stringify(data))
+		console.log('handleJoin:', data)
 
 		var player = data;
 		stage.players[data.id] = player;
@@ -134,7 +140,7 @@ var lobbyState = (function(){
 	}
 
 	function handleLeave(data){
-		console.log('speed:stage:leave ' + JSON.stringify(data))
+		console.log('handleLeave:', data)
 
 		var player = stage.players[data.id];
 		playersIcons[player.icon].removePlayer();
@@ -142,7 +148,7 @@ var lobbyState = (function(){
 	}
 
 	function handleReady(data) {
-		console.log('speed:stage:ready ' + JSON.stringify(data))
+		console.log('handleReady:', data)
 		var player = stage.players[data.id];
 		if(!player){
 			return;
@@ -163,8 +169,15 @@ var lobbyState = (function(){
 	}
 
 	function handleName(data){
-		stage.players[data.playerId].name = data.name;
-		stage.players[data.playerId].icon.changeName(data.name);
+		var player = stage.players[data.playerId];
+		player.name = data.name;
+		var icon = playersIcons[player.icon];
+		icon.changeName(data.name);
+	}
+
+	function handleStageLeave(data){
+		stage = null;
+		game.state.start('main');
 	}
 
 	return {

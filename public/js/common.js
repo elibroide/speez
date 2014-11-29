@@ -5,11 +5,11 @@ var common = {
 
 	flipOrientation: function(targetOrientation){
 		console.log('try to flip ' + orientation + ' to ' + targetOrientation);
-		if(orientation === targetOrientation){
+		if(gameOrientation === targetOrientation){
 			return;
 		}
 		console.log('Flipping ' + orientation + ' to ' + targetOrientation);
-		orientation = targetOrientation;
+		gameOrientation = targetOrientation;
 		var temp = originalWidth;
 		originalWidth = originalHeight;
 		originalHeight = temp;
@@ -108,7 +108,7 @@ var common = {
 
 	tweenStageColor: function(color, complete, time){
 		if(time === undefined){
-			time = 0.5;
+			time = 0.1;
 		}
 		var stageChanger = {
 			stageColor: function(color){
@@ -288,6 +288,23 @@ var common = {
 
 	    return {r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255)};
 	},
+
+	addLogo: function(type, area){
+		if(type === 'logo'){
+			var bbLogo = new com.speez.components.Logo(originalWidth - 10, originalHeight - 10, originalWidth, originalHeight);
+		    bbLogo.logo.anchor.set(1);
+			game.add.existing(bbLogo);
+			area.attach(bbLogo, { width: originalWidth, height: originalHeight, alignHorizontal: Layout.ALIGN_RIGHT, alignVertical: Layout.ALIGN_BOTTOM });
+		} else if(type === 'beta'){
+			var beta = new com.speez.components.Logo(originalWidth, 0, originalWidth, originalHeight, {
+				logo: 'beta',
+			});
+		    beta.logo.anchor.set(1, 0);
+			game.add.existing(beta);
+			area.attach(beta, { width: originalWidth, height: originalHeight, alignHorizontal: Layout.ALIGN_RIGHT, alignVertical: Layout.ALIGN_TOP });
+		}
+
+	}
 }
 
 
