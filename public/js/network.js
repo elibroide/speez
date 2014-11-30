@@ -21,11 +21,11 @@ var Network = (function(){
 	}
 
 	function onConnect(){
-		// alert('onConnect');
+		// game.state.load('menu');
 	}
 
 	function onDisconnect(){
-		// alert('onDisconnect');
+		game.state.start('main');
 	}
 
 	function onConnectFail(){

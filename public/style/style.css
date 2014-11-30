@@ -22,7 +22,6 @@ input#tbxChangeName {
     border-width: 5px;
 	border-radius: 5px;
 	border-color: black;
-	line-height: 50px;
 }
 
 input#tbxChangeName:disabled{
@@ -30,7 +29,6 @@ input#tbxChangeName:disabled{
 }
 
 input#tbxChangeName::-webkit-input-placeholder {
-	font-size: 28px;
 	opacity: 0.5;
 }
 
@@ -52,17 +50,14 @@ input#tbxJoin.focus, input#tbxJoin.error {
 input#tbxJoin::-webkit-input-placeholder {
 	color: #1D1D1D;
 	font-weight: 'bold';
-	font-size: 60px;
 }
 
 input#tbxJoin.focus::-webkit-input-placeholder {
-	font-size: 28px;
 	opacity: 0.5;
 }
 
 input#tbxJoin.error::-webkit-input-placeholder {
 	color: red;
-	font-size: 28px;
 	opacity: 1;
 }
 

@@ -6,7 +6,7 @@ com.speez.components.Logo = (function(){
 	Logo = function (x, y, width, height, options) {
 		options = $.extend({
 			logo: 'bblogo',
-			scale: 0.6,
+			scale: 0.7,
 		}, options);
 		this.options = options;
 		

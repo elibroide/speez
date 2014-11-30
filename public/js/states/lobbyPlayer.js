@@ -80,8 +80,16 @@ var lobbyPlayerState = (function(){
     	container.addChild(buttons);
 
     	// input
+    	$('<form>')
+    		.submit(function(event){
+    			event.preventDefault();
+    		})
+    		.appendTo('body');
+		$('<style>')
+    		.appendTo('form')
+    		.text('input::-webkit-input-placeholder { font-size: 60 }');
     	$('<input id="tbxChangeName" type="text">')
-    		.appendTo('body')
+    		.appendTo('form')
     		.addClass('tbxChangeName')
     		.css({
 				'font-family': 'Montserrat, FontAwesome'
@@ -118,16 +126,23 @@ var lobbyPlayerState = (function(){
 		$('#tbxChangeName').css({ 
 			left: x + 'px',
 			top: y + 'px',
-			width: width + 'px',
-			height: height + 'px',
+			width: width * (detector.mobile() ? 0.9 : 1) + 'px',
+			height: height * (detector.mobile() ? 0.9 : 1) + 'px',
 			'border-width': (5 * Layout.instance.minScale) + 'px',
 			'font-size': (60 * Layout.instance.minScale) + 'px', 
+			'line-height': (80 * Layout.instance.minScale) + 'px',
 		});
+		$('form style')
+			.text('input::-webkit-input-placeholder {font-size:' + (60 * Layout.instance.minScale) + 'px}\n');
 	}
 
 	function toggleButtons(on){
 		$('#tbxChangeName').prop('disabled', !on);
 		buttons.callAll('setEnable', on);
+	}
+
+	function removeDom(){
+		$('form').remove();
 	}
 
 	// gui handlers
@@ -168,7 +183,6 @@ var lobbyPlayerState = (function(){
 
 	function handleLeave(data){
 		console.log('handleLeave:', data);
-		$('#tbxChangeName').remove();
 		game.state.start('main');
 	}
 
@@ -177,7 +191,6 @@ var lobbyPlayerState = (function(){
 		player.game = data;
 		player.game.cardTotal = player.game.cardCount;
 		
-		$('#tbxChangeName').remove();
 		game.state.start('player');
 	}
 
@@ -202,6 +215,8 @@ var lobbyPlayerState = (function(){
 	        	isDebug: false,
 			});
 
+			isReady = false;
+
 			// Draw things
 			drawGui();
 			common.addLogo('logo', lobbyArea);
@@ -223,6 +238,7 @@ var lobbyPlayerState = (function(){
 		shutdown: function(){
 			socket.off('speed:player:leave', handleLeave);
 			socket.off('speed:player:load', handleLoad);
+			removeDom();
 			// socket.off('speed:player:ready', handleReady);
 		},
 

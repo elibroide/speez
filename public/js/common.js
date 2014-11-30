@@ -4,11 +4,11 @@
 var common = {
 
 	flipOrientation: function(targetOrientation){
-		console.log('try to flip ' + orientation + ' to ' + targetOrientation);
+		console.log('try to flip ' + gameOrientation + ' to ' + targetOrientation);
 		if(gameOrientation === targetOrientation){
 			return;
 		}
-		console.log('Flipping ' + orientation + ' to ' + targetOrientation);
+		console.log('Flipping ' + gameOrientation + ' to ' + targetOrientation);
 		gameOrientation = targetOrientation;
 		var temp = originalWidth;
 		originalWidth = originalHeight;
@@ -294,7 +294,7 @@ var common = {
 			var bbLogo = new com.speez.components.Logo(originalWidth - 10, originalHeight - 10, originalWidth, originalHeight);
 		    bbLogo.logo.anchor.set(1);
 			game.add.existing(bbLogo);
-			area.attach(bbLogo, { width: originalWidth, height: originalHeight, alignHorizontal: Layout.ALIGN_RIGHT, alignVertical: Layout.ALIGN_BOTTOM });
+			area.attach(bbLogo, { scale: 1, width: originalWidth, height: originalHeight, alignHorizontal: Layout.ALIGN_RIGHT, alignVertical: Layout.ALIGN_BOTTOM });
 		} else if(type === 'beta'){
 			var beta = new com.speez.components.Logo(originalWidth, 0, originalWidth, originalHeight, {
 				logo: 'beta',

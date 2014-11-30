@@ -44,6 +44,9 @@ var preloadState = (function(){
 			game.load.image('logo', 'images/speez_logo_tagline.png');
 			game.load.image('beta', 'images/beta.png');
 
+			// creatures
+			game.load.image('zumi', 'images/avatar_01.png');
+
 			// Sounds
 			game.load.audio('button/down', ['audio/fx/button/down.mp3']);
 			game.load.audio('button/up', ['audio/fx/button/up.mp3']);

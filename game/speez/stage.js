@@ -18,15 +18,13 @@ function Stage(socket, id, options){
 	// this.on(Stage.EVENT_CARD_FAILED, this.checkScrewed);
 
 	// First of game achievements
-	this.on(Stage.EVENT_CARD_SUCCESS, this.checkFirstOfGame);
+	// this.on(Stage.EVENT_CARD_SUCCESS, this.checkFirstOfGame);
 
 	// Streak Break
 	this.on(Stage.EVENT_CARD_SUCCESS, this.checkStreakBreak);
 
 	// Streak
-	this.on(Stage.EVENT_START, this.initStreak);
-	this.on(Stage.EVENT_SPEEDY, this.checkStreakSpeedy);
-	this.on(Stage.EVENT_CARD_SUCCESS, this.checkStreak);
+	// this.on(Stage.EVENT_SPEEDY, this.checkStreakSpeedy);
 
 	// Last
 	this.on(Stage.EVENT_CARD_OVERLAP, this.checkLast);
@@ -61,7 +59,7 @@ Object.defineProperty(Stage, "ACTION_CARD_BOARD", { value: 'cardBoard' });
 Object.defineProperty(Stage, "ACTION_CARD_OVERLAP", { value: 'cardOverlap' });
 Object.defineProperty(Stage, "ACTION_SPEEDY", { value: 'speedy' });
 
-Object.defineProperty(Stage, "SCREW_TIME", { value: 10000 });
+Object.defineProperty(Stage, "SCREW_TIME", { value: 1000 });
 Object.defineProperty(Stage, "LAST_COUNT", { value: [1, 5] });
 Object.defineProperty(Stage, "STREAK_COUNT", { value: [3, 5, 10] });
 
@@ -166,6 +164,7 @@ Stage.prototype.speedy = function() {
 	this.state = Stage.STATE_SPEEDY;
 	this.saveLastPlay();
 	this.saveSpeedy();
+	this.initStreak();
 	this.emit(Stage.EVENT_SPEEDY);
 };
 
@@ -203,6 +202,7 @@ Stage.prototype.startGame = function() {
 	this.firstPlayerGame = null;
 	this.history = [];
 	this.lastCardTime = 0;
+	this.initStreak();
 	this.state = Stage.STATE_SPEEDY;
 	this.emit(Stage.EVENT_START);
 };
@@ -225,7 +225,16 @@ Stage.prototype.playCardBoard = function(player, card, boardId) {
 		board.currentPlayer = player;
 		board.currentTimestamp = this.lastCardTime;
 		this.emit(Stage.EVENT_CARD_SUCCESS, player, card, board);
-		return { confirm: true, points: this.getCardBoardPoints(player, board, card) };
+		var fazt = this.checkStreak(player);
+		var points = this.getCardBoardPoints(player, board, card);
+		if(fazt){
+			points += this.getFaztPoints();
+		}
+		if(this.firstOfGame){
+			this.firstOfGame = false;
+			points += this.getFirstOfGamePoints();
+		}
+		return { confirm: true, points: points, fazt: fazt };
 	}
 	this.emit(Stage.EVENT_CARD_FAILED, player, card, board);
 	return { confirm: false, reason: 'failed', screw: this.checkScrewed(player, card, board) };
@@ -319,10 +328,13 @@ Stage.prototype.isWin = function() {
 	this.winner = this.findPlayer(function(player){
 		return player.isWin();
 	});
-	if(this.winner){
-		this.state = Stage.STATE_FINISH;
+	if(!this.winner){
+		return null;
 	}
-	return this.winner;
+	this.state = Stage.STATE_FINISH;
+	var points = getWinnerPoints();
+	this.winner.points += points;
+	return { winner: this.winner, points: points };
 };
 
 Stage.prototype.checkCardProximity = function(card1, card2) {
@@ -384,7 +396,15 @@ Stage.prototype.getCardOverlapPoints = function(player, card, overlapCard) {
 };
 
 Stage.prototype.getScrewPoints = function() {
-	return 50;
+	return 100;
+};
+
+Stage.prototype.getFaztPoints = function() {
+	return 100;
+};
+
+Stage.prototype.getFirstOfGamePoints = function() {
+	return 10;
 };
 
 // Achievements
@@ -399,7 +419,8 @@ Stage.prototype.checkScrewed = function(player, card, board) {
 	}
 	if(player.id !== board.currentPlayer.id && Date.now() - board.currentTimestamp < Stage.SCREW_TIME){
 		// this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_SCREWED, { screw: board.currentPlayer.name, boardId: board.id });
-		this.emit(Stage.EVENT_ACHIEVE, board.currentPlayer, Stage.ACHIEVE_SCREW, { screw: player.name, boardId: board.id }, this.getScrewPoints());
+		this.emit(Stage.EVENT_ACHIEVE, board.currentPlayer, Stage.ACHIEVE_SCREW, { screwId: player.id, screw: player.name, boardId: board.id }, this.getScrewPoints());
+		board.currentPlayer.block++;
 		return board.currentPlayer.name;
 	}
 	return null;
@@ -438,13 +459,15 @@ Stage.prototype.checkStreak = function(player) {
 	player.streakCount++;
 	// Check count
 	var streakCount = player.streakCount;
-	var level = Stage.STREAK_COUNT.indexOf(streakCount) + 1;
-	this.currentStreak = { player: player, level: level };
-	if(level === 0){
-		return;
+	var fazt = streakCount % 3;
+	this.currentStreak = { player: player, fazt: fazt };
+	if(fazt !== 0){
+		return false;
 	}
+	player.fazt++;
 	// Notify achievement
-	this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_STREAK, { level: level }, level * 50);
+	// this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_STREAK, { fazt: fazt });
+	return true;
 };
 
 Stage.prototype.checkStreakBreak = function(player) {

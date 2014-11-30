@@ -29,7 +29,7 @@ module.exports.join = function(req, stage) {
 		return;
 	}
 	player.name = join.name;
-	var playerData = _.pick(player, ['id', 'name', 'points']);
+	var playerData = _.pick(player, ['id', 'name', 'points', 'block', 'fazt']);
 	console.log(playerData);
 	stage.socket.emit('speed:stage:join', playerData);
 	req.io.respond(_.extend({ confirm: true, stageId: stage.id }, playerData));
@@ -76,7 +76,7 @@ module.exports.messages = {
 		var isAllReady = req.stage.setReady(req.player, req.data.isReady);
 		req.stage.socket.emit('speed:stage:ready', {
 			id: req.player.id,
-			isReady: req.player.isReady,
+			isReady: req.data.isReady,
 		});
 		if(!isAllReady){
 			return;
@@ -123,7 +123,7 @@ module.exports.messages = {
 		}
 		req.io.respond(data);
 		var win = req.stage.isWin();
-		req.stage.socket.emit('speed:stage:cardBoard', { boardId: req.data.boardId, card: data.card, playerId: req.player.id, points: data.points, cardCount: req.player.cardCount });
+		req.stage.socket.emit('speed:stage:cardBoard', { boardId: req.data.boardId, card: data.card, playerId: req.player.id, points: data.points, cardCount: req.player.cardCount, fazt: data.fazt });
 		if(win){
 			req.stage.eachPlayer(function(player){
 				if(player.id === win){
@@ -132,7 +132,7 @@ module.exports.messages = {
 					player.socket.emit('speed:player:winner', { winner: false });
 				}
 			});
-			req.stage.socket.emit('speed:stage:winner', { winner: win });
+			req.stage.socket.emit('speed:stage:winner', win);
 			return;
 		}
 		if(!req.stage.isAnyMoveExist()){

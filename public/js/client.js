@@ -34,13 +34,8 @@ function init(){
     
     // set size
     detector = new MobileDetect(window.navigator.userAgent);
-    if(detector.mobile()) {
-        originalWidth = config.height;
-        originalHeight = config.width;
-    } else {
-        originalWidth = config.width;
-        originalHeight = config.height;
-    }
+    originalWidth = config.width;
+    originalHeight = config.height;
     originalWidthCenter = originalWidth * 0.5;
     originalHeightCenter = originalHeight * 0.5;
 
@@ -49,6 +44,7 @@ function init(){
     if(config.address.indexOf('file') === 0){
         config.address = 'http://speez.herokuapp.com/';
     }
+    config.isLocal = config.address.indexOf('localhost') > -1
     var script = $('<script>').attr('type', 'text/javascript').attr('src', config.address + 'socket.io/socket.io.js')
     $('head').append(script);
 

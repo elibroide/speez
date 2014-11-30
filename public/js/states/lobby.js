@@ -4,8 +4,9 @@ var lobbyState = (function(){
 	// gui
 	var header;	
 	var lobbyArea;
-	var lobbyGroup;
+	var iconsGroup;
 	var container;
+	var downContainer;
 	var numberText;
 	var numberBox;
 	var playersIcons;
@@ -15,7 +16,11 @@ var lobbyState = (function(){
 	var textPlayers;
 	var btnBoardsCount;
 
+	var timeline;
+
 	function drawGui(){
+		game.stage.backgroundColor = 0xe2e2e2;
+
 		// header
 		var headerHeight = 100;
 		header = new com.speez.components.Header(originalWidth, headerHeight, {
@@ -33,28 +38,19 @@ var lobbyState = (function(){
 
 		// Content
 		lobbyArea = new com.LayoutArea(0, 0, originalWidth, originalHeight, { isDebug: false });
+		downContainer = game.add.sprite();
 		container = game.add.sprite();
 		lobbyArea.attach(container, { width: originalWidth, height: originalHeight });
+		lobbyArea.attach(downContainer, { width: originalWidth, height: originalHeight, alignVertical: Layout.ALIGN_BOTTOM });
 
-		// Lobby data
-		lobbyGroup = game.add.group();
-
-	    // players
+		// Players Icons
+		iconsGroup = game.add.group();
 	    playersIcons = [];
-	    var distance = 200;
-	    var colors = [ 0xFF0000, 0x336699, 0xFFCC00, 0x00ff00 ]
-	    for(var i=0;i<4;i++){
-	    	var player = new PlayerLobby(-distance * 1.5 + i * distance, 0, 155, 80, {
-	    		readyColor: colors[i],
-	    	});
-	    	playersIcons.push(player);
-			lobbyGroup.add(player);
-	    }
-	    playersIcons.push(playersIcons.shift());
-
-    	lobbyGroup.x = originalWidthCenter;
-    	lobbyGroup.y = 210;
-		container.addChild(lobbyGroup);
+    	playersIcons.push(createNewIcon());
+		rearrangeIcons();	    
+    	iconsGroup.x = originalWidthCenter;
+    	iconsGroup.y = 210;
+		container.addChild(iconsGroup);
 
 		var numberTextFormat = {
 			font: "22px Montserrat",
@@ -63,7 +59,7 @@ var lobbyState = (function(){
 		}
 		numberText = game.add.text(originalWidthCenter, originalHeight - 30, 'GAME NUMBER', numberTextFormat);
 		numberText.anchor.set(0.5);
-		container.addChild(numberText);
+		downContainer.addChild(numberText);
 
 		blockNumber = new com.speez.components.BlockNumber(originalWidthCenter - 260 / 2, originalHeight - 126, 260, 70, stage.id, {
 			format: {
@@ -73,7 +69,7 @@ var lobbyState = (function(){
 			},
 			margin: 10,
 		});
-		container.addChild(blockNumber);
+		downContainer.addChild(blockNumber);
 
 		// common
 		common.addLogo('logo', lobbyArea);
@@ -82,12 +78,37 @@ var lobbyState = (function(){
 
 	// Various
 
-	function getAvailableIcon(){
-		for(var i=0;i<playersIcons.length; i++){
-			if(!playersIcons[i].player){
-				return i;
-			}
+	function rearrangeIcons(){
+	    var distance = 200;
+		var timeline = new TimelineMax();
+		for (var i = 0; i < playersIcons.length; i++) {
+			var icon = playersIcons[i];
+			var targetX = -distance * (0.5 * (playersIcons.length - 1)) + i * distance;
+			timeline.to(icon, 1, { x: targetX }, 0);
+		};
+		return timeline;
+	}
+
+	function createNewIcon(){
+		var icon = new PlayerIcon(0, 0, 155, 80, {
+    		readyColor: 0x36de4a,
+    	});
+    	var lastIcon = playersIcons[getAvailableIcon()];
+		if(lastIcon){
+			icon.x = lastIcon.x;
+			icon.y = lastIcon.y;
 		}
+		iconsGroup.addAt(icon, 0);
+		return icon;
+	}
+
+	function getAvailableIcon(){
+		return playersIcons.length-1;
+		// for(var i=0;i<playersIcons.length; i++){
+		// 	if(!playersIcons[i].player){
+		// 		return i;
+		// 	}
+		// }
 	}
 
 	function isAbleToPlay(){
@@ -125,7 +146,7 @@ var lobbyState = (function(){
 		_.each(_.keys(stage.players), function(key){
 			var player = stage.players[key];
 			player.icon = getAvailableIcon();
-			playersIcons[player.icon].setPlayer(player);
+			playersIcons[player.icon].setPlayer(player, false);
 		});
 	}
 
@@ -136,36 +157,86 @@ var lobbyState = (function(){
 		stage.players[data.id] = player;
 		player.victories = 0;
 		player.icon = getAvailableIcon();
-		playersIcons[player.icon].setPlayer(player);
+
+		timeline = playersIcons[player.icon].setPlayer(player, true);
+		if(playersIcons.length < 4){
+			playersIcons.push(createNewIcon());
+			timeline.add(rearrangeIcons());
+		}
 	}
 
 	function handleLeave(data){
 		console.log('handleLeave:', data)
 
 		var player = stage.players[data.id];
-		playersIcons[player.icon].removePlayer();
+		var icon = playersIcons[player.icon];
+		for (var i = player.icon + 1; i < playersIcons.length; i++) {
+			var nextIcon = playersIcons[i];
+			if(nextIcon.player){
+				nextIcon.player.icon--;
+			}
+		};
+		playersIcons.splice(player.icon, 1);
+
+		var timeline = icon.removePlayer();
+		timeline.add(icon.removePopup(), 0);
+
+		if(playersIcons[playersIcons.length - 1].player){
+			playersIcons.push(createNewIcon());
+		}
+		timeline.add(rearrangeIcons());
 		delete stage.players[data.id];
 	}
 
 	function handleReady(data) {
-		console.log('handleReady:', data)
+		console.log('handleReady:', data);
 		var player = stage.players[data.id];
 		if(!player){
 			return;
 		}
 		player.isReady = data.isReady;
-		playersIcons[player.icon].setReady(data.isReady);
-		if(!data.isReady){
-			return;
-		}
-		if(isAbleToPlay()){
-			socket.emit('speed:stage:load');
+		var icon = playersIcons[player.icon];
+		if(player.isReady){
+			icon.popup({
+				color: 0x36de4a,
+				text: 'Ready',
+				symbol: '\uf00c',
+				moveTime: 1,
+				isStay: true,
+			});
+			icon.tweenColor({ color: 0x36de4a });
+		} else {
+			icon.removePopup();
+			icon.tweenColor();
 		}
 	}
 
 	function handleLoad(data) {
 		stage.game = data;
-		game.state.start('stage');
+
+		if(timeline){
+			timeline.kill();
+		}
+
+		var timeline = new TimelineMax({ onComplete: function(){
+			game.state.start('stage');
+		} });
+		var lastIcon = playersIcons[playersIcons.length-1];
+		if(!lastIcon.player){
+			playersIcons.splice(playersIcons.length-1, 1);
+			timeline.to(lastIcon, 1, {alpha: 0});
+		}
+		timeline.add(function() { 
+			_.invoke(playersIcons, 'setAvatarAnimation', false);
+		});
+		timeline.add(rearrangeIcons(), 0);
+		timeline.add(_.invoke(playersIcons, 'removePopup'), 0);
+		timeline.add(_.invoke(playersIcons, 'removeStats'), 0);
+		timeline.addLabel('start');
+		timeline.add(_.invoke(playersIcons, 'tweenColor', { color: 0xffffff }), 'start');
+		timeline.to(iconsGroup, 2, { y: originalHeight - 60, ease: Sine.easeInOut }, 'start');
+		timeline.to([blockNumber, numberText], 2, { y: '+=250', alpha: 0, ease: Sine.easeIn}, 'start');
+		timeline.add(common.tweenStageColor(0x1e1e1e, null, 1));
 	}
 
 	function handleName(data){

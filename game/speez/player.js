@@ -7,6 +7,8 @@ function Player(socket, id, stage){
 	this.socket = socket;
 	this.id = id;
 	this.points = 0;
+	this.block = 0;
+	this.fazt = 0;
 }
 Player.prototype.constructor = Player;
 

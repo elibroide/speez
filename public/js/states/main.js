@@ -54,12 +54,6 @@ var mainState = (function(){
 			radius: 5,
 	    };
 		btnBecomeStage = new MenuButton(0, 746, 486, 128, _.extend({ callback: handleBecomeStageClicked, text: "CREATE A GAME" }, buttonOptions));
-		
-		// testing
-		btnTestPlayer = new MenuButton(150, game.world.height - 30, 300, 60, _.extend({ callback: handleTestingPlayerClicked, text: "T.P" }, buttonOptions));
-		btnTestStage = new MenuButton(150, game.world.height - 90, 300, 60, _.extend({ callback: handleTestingStageClicked, text: "T.S" }, buttonOptions));
-		game.add.existing(btnTestPlayer);
-		game.add.existing(btnTestStage);
 
 		// texts
 		var textsFormat = {
@@ -85,8 +79,25 @@ var mainState = (function(){
     	container.addChild(buttons);
 
     	// input
+    	$('<form>')
+    		.submit(function(event){
+    			event.preventDefault();
+    		})
+    		.appendTo('body');
+		$('<style>')
+    		.appendTo('form')
+    		.text('input::-webkit-input-placeholder { font-size: 60 }');
+    	$('<button type="submit">')
+    		.css({
+    			position: 'absolute',
+    			margin: -1000,
+    		})
+    		.click(function(event){
+    			event.preventDefault();
+    		})
+    		.appendTo('form');
     	$('<input id="tbxJoin" type="text">')
-    		.appendTo('body')
+    		.appendTo('form')
     		.addClass('tbxJoin')
     		.css({
 				position: 'absolute',
@@ -94,7 +105,7 @@ var mainState = (function(){
 				'text-align': 'center',
 				'font-family': 'Montserrat, FontAwesome'
     		})
-    		.attr('placeholder', '\uf148')
+    		.attr('placeholder', '\uf0e7')
     		.focusout(onJoinTextFocusOut)
     		.focusin(onJoinTextFocusIn)
     		.keydown(onJoinTextKeyDown)
@@ -121,12 +132,23 @@ var mainState = (function(){
 	    headerButton.inputEnabled = true;
 	    headerButton.events.onInputDown.add(onQuestionClicked);
 		header.addLeft(headerButton);
+
+		if(config.isLocal){
+			drawTest();
+		}
+	}
+
+	function drawTest(){
+		btnTestPlayer = new MenuButton(logo.x, logo.y, 300, 60, _.extend({ callback: handleTestingPlayerClicked, text: "T.P" }));
+		btnTestStage = new MenuButton(logo.x, logo.y + 60, 300, 60, _.extend({ callback: handleTestingStageClicked, text: "T.S" }));
+		game.add.existing(btnTestPlayer);
+		game.add.existing(btnTestStage);
 	}
 
 	function onJoinTextFocusOut(event){
 		$('#tbxJoin')
 			.removeClass('focus')
-			.attr('placeholder', '\uf148');
+			.attr('placeholder', '\uf0e7');
 	}
 
 	function onJoinTextFocusIn(event){
@@ -144,8 +166,9 @@ var mainState = (function(){
 			$('#tbxJoin').blur();
 			event.preventDefault();
 			var id = parseInt($('#tbxJoin').val());
-			if(id){
-				// toggleButtons(false);
+			if(id === 999 && !btnTestPlayer){
+				drawTest();
+			} else if(id) {
 				socket.emit('speed:join', { id: id }, handleJoin);
 				toggleButtons(false);
 			}
@@ -157,6 +180,10 @@ var mainState = (function(){
 		return val;
 	}
 
+	function removeDom(){
+		$('form').remove();
+	}
+
 	function onAreaResized(){
 		var width = 466 * Layout.instance.minScale;
 		var height = 144 * Layout.instance.minScale;
@@ -165,11 +192,16 @@ var mainState = (function(){
 		$('#tbxJoin').css({ 
 			left: x + 'px',
 			top: y + 'px',
-			width: width + 'px',
-			height: height + 'px',
+			width: width * (detector.mobile() ? 0.9 : 1) +'px',
+			height: height * (detector.mobile() ? 0.9 : 1) + 'px',
 			'border-width': (5 * Layout.instance.minScale) + 'px',
 			'font-size': (60 * Layout.instance.minScale) + 'px', 
+			'line-height': (80 * Layout.instance.minScale) + 'px', 
 		});
+		$('form style')
+			.text('input::-webkit-input-placeholder {font-size:' + (60 * Layout.instance.minScale) + 'px}\n' +
+				'input.focus::-webkit-input-placeholder {font-size:' + (33 * Layout.instance.minScale) + 'px}\n' +
+				'input.error::-webkit-input-placeholder {font-size:' + (33 * Layout.instance.minScale) + 'px}');
 	}
 
 	function getRandomTime(number, from, to){
@@ -195,12 +227,10 @@ var mainState = (function(){
 
 	function handleBecomeStageClicked(){
 		toggleButtons(false);
-		$('#tbxJoin').remove();
 		game.state.start('lobby');
 	}
 
 	function handleTestingPlayerClicked(){
-		$('#tbxJoin').remove();
 		// mockup
 		var colors = [0xbf00d8, 0xd84100, 0xdbaf00, 0xa1ff00, 0x00c8cc, 0x0065bf];
 		colors = _.shuffle(colors);
@@ -234,7 +264,6 @@ var mainState = (function(){
 	}
 
 	function handleTestingStageClicked(){
-		$('#tbxJoin').remove();
 		stage = {
 			game: {
 				boardCount: 4,
@@ -262,7 +291,7 @@ var mainState = (function(){
 				.blur()
 				.val('')
 				.addClass('error')
-				.attr('placeholder', 'GAME NOT FOUND')
+				.attr('placeholder', 'GAME NOT FOUND');
 			toggleButtons(true);
 			return;
 		}
@@ -270,6 +299,8 @@ var mainState = (function(){
 			id: data.id,
 			name: data.name,
 			stageId: data.stageId,
+			block: data.block,
+			fazt: data.fazt,
 		}
 		$('#tbxJoin').remove();
 		game.state.start('lobbyPlayer');
@@ -299,7 +330,7 @@ var mainState = (function(){
 		},
 
 		shutdown: function(){
-			
+			removeDom();
 		},
 
 		resize: function (width, height) {

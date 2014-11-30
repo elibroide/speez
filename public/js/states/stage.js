@@ -10,8 +10,7 @@ var stageState;
 	var boards;
 	var boardsContainer;
 	var timerBall;
-	var achievementBoard;
-	var playersContainer;
+	var iconsGroup;
 	var playersIcons;
 	var rain;
 
@@ -22,6 +21,8 @@ var stageState;
 	var timelineEnd;
 
 	function drawGui(){
+		game.stage.backgroundColor = 0x1e1e1e;
+
 		// Content
 		stageArea = new com.LayoutArea(0, 0, originalWidth, originalHeight, { isDebug: false });
 		container = game.add.sprite();
@@ -43,30 +44,23 @@ var stageState;
     		mode: Layout.PROPORTIONAL_OUTSIDE,
     	});
 
-		// players icons
-		playersContainer = game.add.sprite();
-		stageArea.attach(playersContainer, { 
-			width: originalWidth, 
-			height: originalHeight,
-			alignVertical: Layout.ALIGN_BOTTOM,
-		});
-		playersIcons = [];
-	    var distance = 250;
-		for (var i = 0; i < 4; i++) {
-			var icon = new StagePlayer(originalWidthCenter + -distance * 1.5 + i * distance, originalHeight - 150, { 
-				disappearY: originalWidth + 100,
-	 		});
-			playersIcons[i] = icon;
-			playersContainer.addChild(icon);
-		};
-	    playersIcons.push(playersIcons.shift());
-
 	    // setting players
+	    playersIcons = [];
+	    iconsGroup = game.add.group();
+	    iconsGroup.x = originalWidthCenter;
+	    iconsGroup.y = originalHeight - 60;
+	    container.addChild(iconsGroup);
 		var keys = _.keys(stage.players);
 		for (var i = 0; i < keys.length; i++) {
 			var player = stage.players[keys[i]];
-			playersIcons[player.icon].setPlayer(player.name, player.points);
+			var icon = new PlayerIcon(0, 0, 155, 80, { 
+				isShowStats: false,
+	 		});
+			playersIcons[player.icon] = icon;
+			iconsGroup.add(icon);
+			icon.setPlayer(player, false);
 		};
+	    rearrangeIcons(false);
 
 		timer = new com.speez.components.TimerLines({ 
 			time: 10,
@@ -80,8 +74,9 @@ var stageState;
 		incoming = new com.speez.components.Incoming(originalWidthCenter, originalHeightCenter);
 		container.addChild(incoming);
 
-		achievementBoard = new com.speez.components.AchievementBoard(originalWidthCenter, -originalHeightCenter + 100, 0, 0);
-		container.addChild(achievementBoard);
+		// common
+		// common.addLogo('logo', stageArea);
+		common.addLogo('beta', stageArea);
 	}
 
 	function drawBoards(){
@@ -91,7 +86,7 @@ var stageState;
 		boards = [];
 		boardsContainer = game.add.group();
 		var minRadius = 100;
-		var maxRadius = 175;
+		var maxRadius = 140;
 		var minY = -150;
 		var maxY = 0;
 		var rotateSpeed = 0.2;
@@ -204,7 +199,6 @@ var stageState;
 
 	function handleSpeedy(data){
 		console.log('handleSpeedy:', data);
-		achievementBoard.hide();
 
 		var texts = [
 			{ text: '3', sound: 'countdown/3' },
@@ -253,7 +247,7 @@ var stageState;
 		});
 		timeline.add(timer.disappear(), 0);
 		timeline.add(_.invoke(boards, 'disappear'), 0);
-		timeline.add(_.invoke(playersIcons, 'disappear'), 0);
+		// timeline.add(_.invoke(playersIcons, 'disappear', true), 0);
 		timeline.add(incoming.show(texts, textsOptions), '+=' + 1);
 		timeline.add(incoming.show(speezTexts, speezOptions), '+=' + 1);
 	}
@@ -262,8 +256,6 @@ var stageState;
 		console.log('handlePlay:', data);
 		stage.game.boards = data;
 		
-		achievementBoard.show();
-
 		drawBoards();
 		var timeline = new TimelineMax({  });
 		timeline.add(function(){
@@ -271,7 +263,7 @@ var stageState;
 		});
 		timeline.add(setBoards(), 0);
 		timeline.add(timer.appear(), 0);
-		timeline.add(_.invoke(playersIcons, 'appear'), 0);
+		// timeline.add(_.invoke(playersIcons, 'appear', true), 0);
 	}
 
 	function handleCardBoard(data){
@@ -285,11 +277,29 @@ var stageState;
 		// set icon
 		player.points += data.points;
 		var icon = playersIcons[player.icon];
-		icon.setColor(board.options.color);
-		icon.addPoints(data.points, player.points)
+		icon.tweenColor({ color: board.options.color, isReturn: true, returnTime: 3});
+		icon.setPoints(player.points);
 		player.cardCount = data.cardCount;
 		setPlayerCards(icon, player);
-
+		var symbol = '\uf067';
+		if(data.fazt){
+			symbol = '\uf0e7';
+			icon.showIcon({
+				symbol: symbol,
+				symbolFormat: {
+			    	font: "125px FontAwesome",
+			        fill: "#ffd646",
+			        align: "center"
+			    },
+			});
+		}
+		icon.popup({
+			color: board.options.color,
+			text: data.points.toString(),
+			symbol: symbol,
+			isStay: false,
+			stayTime: -0.5,
+		});
 		timer.setCard(board.options.color);
 	}
 
@@ -299,7 +309,14 @@ var stageState;
 		var player = stage.players[data.playerId];
 		player.points += data.points;
 		var icon = playersIcons[player.icon];
-		icon.addPoints(data.points, player.points)
+		icon.setPoints(player.points);
+		icon.popup({
+			color: 0xffffff,
+			text: data.points.toString(),
+			symbol: '\uf067',
+			isStay: false,
+			stayTime: -0.5,
+		});
 		player.cardCount = data.cardCount;
 		setPlayerCards(icon, player);
 	}
@@ -318,8 +335,21 @@ var stageState;
 	function handleWinner(data){
 		console.log('handleWinner:', data);
 		stage.game.winner = data.winner;
-		stage.players[data.winner].victories++;
-		achievementBoard.hide();
+
+		var player = stage.players[data.winner];
+		player.points += data.points;
+		player.victories++;
+
+		var icon = playersIcons[player.icon];
+		icon.tweenColor({color: 0x009bff, isReturn: true, returnTime: 10});
+		icon.setPoints(player.points);
+		icon.popup({
+			color: 0x009bff,
+			text: data.points.toString(),
+			symbol: '\uf091',
+			isStay: false,
+			stayTime: 1,
+		});
 
 		var texts = [ 
 			{ text: 'WINNER', sound: '' }, 
@@ -342,12 +372,11 @@ var stageState;
 		}
 		var incomingTimeline = incoming.show(texts, winnerOptions);
 
-		
 		var timeline = new TimelineMax();
 		timeline.add(function(){ rain.active = false; });
 		timeline.add(timer.disappear());
 		timeline.add(_.invoke(boards, 'disappear'), 0);
-		timeline.add(_.invoke(playersIcons, 'disappear'));
+		// timeline.add(_.invoke(playersIcons, 'disappear', true));
 		timeline.add(incomingTimeline, '+=' + 1);
 		timeline.add(function(){ 
 			game.state.start('stageFinish');
@@ -360,13 +389,35 @@ var stageState;
 		var player = stage.players[data.player];
 		if(data.points){
 			player.points += data.points;
-			playersIcons[player.icon].addPoints(data.points, player.points);
 		}
-		var achievement = getAchievement(data.achievement, player, data.data);
-		if(!achievement.text){
-			return;
+		if(data.achievement === 'screw'){
+			handleScrew(player, data);
 		}
-		achievementBoard.add(achievement.text);
+	}
+
+	function handleScrew(player, data){
+		var screwPlayer = stage.players[data.screwPlayerId];
+		var icon = playersIcons[screwPlayer.icon];
+		icon.showIcon({
+			symbol: '\uf05e',
+			symbolFormat: {
+		    	font: "125px FontAwesome",
+		        fill: "#cb1800",
+		        align: "center"
+		    },
+		});
+		player.points += data.points;
+		
+		var icon = playersIcons[player.icon];
+		icon.setPoints(player.points);
+		icon.tweenColor({color: 0xcb1800, isReturn: true });
+		icon.popup({
+			color: 0xcb1800,
+			text: data.points.toString(),
+			symbol: '\uf05e',
+			isStay: false,
+			stayTime: -0.5,
+		});
 	}
 
 	function handleLeave(data){
@@ -384,7 +435,7 @@ var stageState;
 		timeline.add(timer.disappear());
 		timeline.add(function(){ rain.active = false; });
 		timeline.add(_.invoke(boards, 'disappear'), 0);
-		timeline.add(_.invoke(playersIcons, 'disappear'));
+		// timeline.add(_.invoke(playersIcons, 'disappear', true));
 		timeline.add(
 			common.tweenStageColor(0xffffff, function(){
 				_.delay(function(){ 
@@ -401,31 +452,21 @@ var stageState;
 		timer.noMoves();
 	}
 
-	// other
-
-	function getAchievement(achieve, player, data){
-		switch(achieve){
-			case 'screw':
-				return { text: data.name + ' blocked ' + player.name };
-			case 'firstOfGame':
-				return { text: player.name + ' played the first card' };
-			case 'streak':
-				return { text: player.name + ' is ' + getStreakName(data.level) };
-			case 'last':
-				return { text: player.name + ' has ' + data.count + ' card' + (data.count === 1 ? '' : 's') };
+	function rearrangeIcons(isAnimate){
+	    var distance = 200;
+		var timeline = new TimelineMax();
+		for (var i = 0; i < playersIcons.length; i++) {
+			var icon = playersIcons[i];
+			var targetX = -distance * (0.5 * (playersIcons.length - 1)) + i * distance;
+			timeline.to(icon, 1, { x: targetX }, 0);
+		};
+		if(!isAnimate){
+			timeline.progress(1);
 		}
+		return timeline;
 	}
 
-	function getStreakName(level){
-		switch(level){
-			case 1:
-				return 'Great';
-			case 2:
-				return 'Amazing';
-			case 3:
-				return 'AWESOME';
-		}
-	} 
+	// other
 
 	function doSpeedy(){
 		if(config.isTest){
@@ -477,6 +518,8 @@ var stageState;
 			points: 0,
 			icon: 0,
 			cardCount: 20,
+			block: 0,
+			fazt: 0,
 		}
 		stage.players[1] = {
 			id: 1,
@@ -484,6 +527,8 @@ var stageState;
 			points: 0,
 			icon: 1,
 			cardCount: 20,
+			block: 0,
+			fazt: 0,
 		}
 
 		var boardId = 0;
@@ -493,13 +538,16 @@ var stageState;
 				case 113:
 					handleAchieve({ achievement: 'firstOfGame', player: 0, points: 10 });
 					break;
+				case 119:
+					handleAchieve({ achievement: 'screw', player: 0, screwPlayerId: 1, points: 100 });
+					break;
 				default:
 					if(event.charCode >= 48 && event.charCode <= 57){
 						var number = event.charCode - 48;
 						var playerId = _.random(0, 0);
 						var player = stage.players[playerId];
 						player.cardCount--;
-						handleCardBoard({ card: number.toString(), boardId: _.random(0, stage.game.boardCount - 1), playerId: playerId, cardCount: player.cardCount, points: 100 });
+						handleCardBoard({ card: number.toString(), fazt: _.random(0,1), boardId: _.random(0, stage.game.boardCount - 1), playerId: playerId, cardCount: player.cardCount, points: 100 });
 					}
 					return;
 			}
@@ -528,7 +576,6 @@ var stageState;
 				return;
 			}
 
-			game.stage.backgroundColor = 0x1e1e1e;
 			drawGui();
 			
 			socket.on('speed:stage:noMoves', handleNoMoves);
