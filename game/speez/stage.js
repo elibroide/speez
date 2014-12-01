@@ -270,9 +270,9 @@ Stage.prototype.getCard = function() {
 };
 
 Stage.prototype.randomizeBoards = function() {
-	var colors = _.shuffle(this.colors);
 	var tries = 100;
 	do{
+		var colors = _.shuffle(this.colors);
 		_.each(this.boards, function(board){
 			board.color = colors.pop();
 			board.current = _.random(0,9);
@@ -332,9 +332,46 @@ Stage.prototype.isWin = function() {
 		return null;
 	}
 	this.state = Stage.STATE_FINISH;
-	var points = getWinnerPoints();
+	var points = this.getWinnerPoints();
 	this.winner.points += points;
-	return { winner: this.winner, points: points };
+
+	// getting best blocker
+	var bestBlocker = this.getBest('block', false);
+	if(bestBlocker){
+		bestBlocker.points += 300;
+		bestBlocker = bestBlocker.id;
+	}
+	var bestFazt = this.getBest('fazt', false);
+	if(bestFazt) {
+		bestFazt.points += 300;
+		bestFazt = bestFazt.id;
+	}
+
+	return { winner: this.winner, points: points, bestFazt: bestFazt, bestBlocker: bestBlocker, bestFaztPoints: 300, bestBlockerPoints: 300 };
+};
+
+Stage.prototype.getBest = function(property, ignoreZero, direction) {
+	if(direction === undefined){
+		direction = 1;
+	}
+	var max = -9007199254740992;
+	var players = [];
+	this.eachPlayer(function(player){
+		var value = player[property] * direction;
+		if(!ignoreZero && value === 0){
+			return;
+		}
+		if(value > max){
+			players = [player];
+			max = player[property];
+		} else if(value === max){
+			players.push(player);
+		}
+	});
+	if(players.length === 1){
+		return players[0];
+	}
+	return null;
 };
 
 Stage.prototype.checkCardProximity = function(card1, card2) {

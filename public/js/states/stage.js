@@ -12,6 +12,8 @@ var stageState;
 	var timerBall;
 	var iconsGroup;
 	var playersIcons;
+	var incoming;
+	var notification;
 	var rain;
 
 	// groups
@@ -73,6 +75,12 @@ var stageState;
 		
 		incoming = new com.speez.components.Incoming(originalWidthCenter, originalHeightCenter);
 		container.addChild(incoming);
+
+		var notificationX = 126;
+		notification = new com.speez.components.TextNotification(notificationX, originalHeightCenter, originalWidth - notificationX * 2, 200, {
+
+		});
+		container.addChild(notification);
 
 		// common
 		// common.addLogo('logo', stageArea);
@@ -138,6 +146,13 @@ var stageState;
 			return;
 		}
 		socket.emit('speed:stage:play', handlePlay);
+	}
+
+	function onWinnerComplete(){
+		if(config.isTest){
+
+		}
+		socket.emit('speed:stage:next');
 	}
 
 	// handling socket
@@ -248,7 +263,7 @@ var stageState;
 		timeline.add(timer.disappear(), 0);
 		timeline.add(_.invoke(boards, 'disappear'), 0);
 		// timeline.add(_.invoke(playersIcons, 'disappear', true), 0);
-		timeline.add(incoming.show(texts, textsOptions), '+=' + 1);
+		// timeline.add(incoming.show(texts, textsOptions), '+=' + 1);
 		timeline.add(incoming.show(speezTexts, speezOptions), '+=' + 1);
 	}
 
@@ -283,6 +298,7 @@ var stageState;
 		setPlayerCards(icon, player);
 		var symbol = '\uf067';
 		if(data.fazt){
+			player.currentFazt++;
 			symbol = '\uf0e7';
 			icon.showIcon({
 				symbol: symbol,
@@ -332,58 +348,6 @@ var stageState;
 		icon.setCards(1 - player.cardCount / stage.game.cardCount);
 	}
 
-	function handleWinner(data){
-		console.log('handleWinner:', data);
-		stage.game.winner = data.winner;
-
-		var player = stage.players[data.winner];
-		player.points += data.points;
-		player.victories++;
-
-		var icon = playersIcons[player.icon];
-		icon.tweenColor({color: 0x009bff, isReturn: true, returnTime: 10});
-		icon.setPoints(player.points);
-		icon.popup({
-			color: 0x009bff,
-			text: data.points.toString(),
-			symbol: '\uf091',
-			isStay: false,
-			stayTime: 1,
-		});
-
-		var texts = [ 
-			{ text: 'WINNER', sound: '' }, 
-		];
-		var winnerOptions = {
-			isTexts: true,
-			delay: 1,
-			size: 300,
-			delayBetween: 1,
-			effectOptions: {
-				name: 'speezIncoming',
-				backRadius: 650,
-			},
-			format: {
-				font: "bold 150px Montserrat",
-		        fill: "#111111",
-		        align: "center",
-			},
-			timeScale: 0.9,
-		}
-		var incomingTimeline = incoming.show(texts, winnerOptions);
-
-		var timeline = new TimelineMax();
-		timeline.add(function(){ rain.active = false; });
-		timeline.add(timer.disappear());
-		timeline.add(_.invoke(boards, 'disappear'), 0);
-		// timeline.add(_.invoke(playersIcons, 'disappear', true));
-		timeline.add(incomingTimeline, '+=' + 1);
-		timeline.add(function(){ 
-			game.state.start('stageFinish');
-		}, '+=' + 1);
-		timelineEnd = timeline;
-	}
-
 	function handleAchieve(data){
 		console.log('handleAchieve:', data);
 		var player = stage.players[data.player];
@@ -396,6 +360,7 @@ var stageState;
 	}
 
 	function handleScrew(player, data){
+		player.currentBlock++;
 		var screwPlayer = stage.players[data.screwPlayerId];
 		var icon = playersIcons[screwPlayer.icon];
 		icon.showIcon({
@@ -430,20 +395,7 @@ var stageState;
 			return;
 		}
 		// stop the game if there are no players
-		var timeline = new TimelineMax();
-		timeline.add(incoming.stop());
-		timeline.add(timer.disappear());
-		timeline.add(function(){ rain.active = false; });
-		timeline.add(_.invoke(boards, 'disappear'), 0);
-		// timeline.add(_.invoke(playersIcons, 'disappear', true));
-		timeline.add(
-			common.tweenStageColor(0xffffff, function(){
-				_.delay(function(){ 
-					game.state.start('lobby');
-				}, 1000);
-			}), 
-		'+=' + 1);
-		
+		game.state.start('lobby');
 		Audio.instance.stop('fx');
 	}
 
@@ -452,18 +404,115 @@ var stageState;
 		timer.noMoves();
 	}
 
-	function rearrangeIcons(isAnimate){
-	    var distance = 200;
+	function handleWinner(data){
+		console.log('handleWinner:', data);
+		stage.game.winnerData = data;
+
+		var player = stage.players[data.winner];
+		player.victories++;
+
+		finalizePlayers();
+
 		var timeline = new TimelineMax();
-		for (var i = 0; i < playersIcons.length; i++) {
-			var icon = playersIcons[i];
-			var targetX = -distance * (0.5 * (playersIcons.length - 1)) + i * distance;
-			timeline.to(icon, 1, { x: targetX }, 0);
-		};
-		if(!isAnimate){
-			timeline.progress(1);
+		timelineEnd = timeline;
+		timeline.add(function(){ rain.active = false; });
+		timeline.add(timer.disappear());
+		timeline.add(_.invoke(boards, 'disappear'), 0);
+		// timeline.add(_.invoke(playersIcons, 'disappear', true));
+		// timeline.add(onWinnerComplete, '+=' + 2);
+		
+		var icon;
+		
+		// best blocker
+		if(stage.game.winnerData.bestBlocker){
+			var bestBlocker = stage.players[stage.game.winnerData.bestBlocker];
+			icon = playersIcons[bestBlocker.icon];
+			bestBlocker.points += stage.game.winnerData.bestBlockerPoints;
+			var blockerTexts = [
+				{ text: 'BEST', color: 0xffffff },
+				{ text: 'BLOCKER', color: 0xffffff },
+				{ text: bestBlocker.name, color: 0xcb1800 },
+			]
+			timeline.addLabel('bestBlocker', '+=2');
+			timeline.add(notification.show(blockerTexts, '\uf05e', bestBlocker.currentBlock, {
+				symbolColor: 0xffffff,
+				delayTime: 3,
+			}), 'bestBlocker');
+			timeline.add(icon.popup({
+				color: 0xcb1800,
+				text: stage.game.winnerData.bestBlockerPoints.toString(),
+				symbol: '\uf05e',
+				isStay: false,
+				stayTime: 1,
+			}), 'bestBlocker');
+			timeline.add(icon.setPoints(player.points), 'bestBlocker');
+			timeline.add(icon.tweenColor({color: 0xcb1800, isReturn: true, returnTime: 3}), 'bestBlocker');
 		}
-		return timeline;
+		// best fazt
+		if(stage.game.winnerData.bestFazt){
+			var bestFazt = stage.players[stage.game.winnerData.bestFazt];
+			icon = playersIcons[bestFazt.icon];
+			bestFazt.points += stage.game.winnerData.bestFaztPoints;
+			var faztTexts = [
+				{ text: 'FAZT', color: 0xffffff },
+				{ text: 'ONE', color: 0xffffff },
+				{ text: bestFazt.name, color: 0xb600db },
+			]
+			timeline.addLabel('bestFazt', '+=2');
+			timeline.add(notification.show(faztTexts, '\uf0e7', bestFazt.currentFazt, {
+				symbolColor: 0xffffff,
+				delayTime: 3,
+			}), 'bestFazt');
+			timeline.add(icon.popup({
+				color: 0xb600db,
+				text: stage.game.winnerData.bestFaztPoints.toString(),
+				symbol: '\uf0e7',
+				isStay: false,
+				stayTime: 1,
+			}), 'bestFazt');
+			timeline.add(icon.setPoints(player.points), 'bestFazt');
+			timeline.add(icon.tweenColor({color: 0xb600db, isReturn: true, returnTime: 3}), 'bestFazt');
+		}
+		// points
+		var texts = [ 
+			{ text: 'THE', color: 0xffffff },
+			{ text: 'WINNER', color: 0xffffff },
+			{ text: player.name, color: 0x009bff },
+		];
+		icon = playersIcons[player.icon];
+		player.points += stage.game.winnerData.points;
+		timeline.addLabel('points', '+=2');
+		timeline.add(function(){
+			socket.emit('speed:stage:next');
+		}, 'points');
+		timeline.add(notification.show(texts, '\uf091', null, {
+			symbolColor: 0xffffff,
+			delayTime: 5,
+		}), 'points');
+		timeline.add(icon.popup({
+			color: 0x009bff,
+			text: stage.game.winnerData.points.toString(),
+			symbol: '\uf091',
+			isStay: false,
+			stayTime: 3,
+		}), 'points');
+		timeline.add(icon.setPoints(player.points), 'points');
+		timeline.add(icon.tweenColor({color: 0x009bff, isReturn: true, returnTime: 5}), 'points');
+
+
+	}
+
+	function handleNext(data){
+		console.log('handleNext:', data);
+
+		// var player = stage.players[stage.game.winnerData.winner];
+
+		// Finish
+		timelineEnd.to(iconsGroup, 1, { delay: 1, y: 210 });
+		timelineEnd.add(common.tweenStageColor(0xe2e2e2, null, 1));
+		timelineEnd.add(function(){
+			game.state.start('lobby');
+		});
 	}
 
 	// other
@@ -487,6 +536,41 @@ var stageState;
 			timeline.add(boards[i].appear(prevColor), 0);
 		}
 		return timeline;
+	}
+
+	function rearrangeIcons(isAnimate){
+	    var distance = 200;
+		var timeline = new TimelineMax();
+		for (var i = 0; i < playersIcons.length; i++) {
+			var icon = playersIcons[i];
+			var targetX = -distance * (0.5 * (playersIcons.length - 1)) + i * distance;
+			timeline.to(icon, 1, { x: targetX }, 0);
+		};
+		if(!isAnimate){
+			timeline.progress(1);
+		}
+		return timeline;
+	}
+
+	function initPlayers(){
+		var keys = _.keys(stage.players);
+		_.each(keys, function(key){
+			var player = stage.players[key];
+			player.currentFazt = 0;
+			player.currentBlock = 0;
+		});
+	}
+
+	function finalizePlayers(){
+		var keys = _.keys(stage.players);
+		_.each(keys, function(key){
+			var player = stage.players[key];
+			player.fazt += player.currentFazt;
+			player.block += player.currentBlock;
+
+			var icon = playersIcons[player.icon];
+			icon.setCards(0);
+		});
 	}
 
 	// test
@@ -514,21 +598,23 @@ var stageState;
 		stage.players = [];
 		stage.players[0] = {
 			id: 0,
-			name: 'Monkey',
+			name: 'Zot',
 			points: 0,
 			icon: 0,
 			cardCount: 20,
 			block: 0,
 			fazt: 0,
+			avatar: 'Zot',
 		}
 		stage.players[1] = {
 			id: 1,
-			name: 'Cow',
+			name: 'Zeeps',
 			points: 0,
 			icon: 1,
 			cardCount: 20,
 			block: 0,
 			fazt: 0,
+			avatar: 'Zeeps',
 		}
 
 		var boardId = 0;
@@ -576,6 +662,7 @@ var stageState;
 				return;
 			}
 
+			initPlayers();
 			drawGui();
 			
 			socket.on('speed:stage:noMoves', handleNoMoves);
@@ -585,6 +672,7 @@ var stageState;
 			socket.on('speed:stage:winner', handleWinner);
 			socket.on('speed:stage:achieve', handleAchieve);
 			socket.on('speed:stage:leave', handleLeave);
+			socket.on('speed:stage:next', handleNext);
 			socket.emit('speed:stage:loaded');
 		},
 
@@ -600,6 +688,7 @@ var stageState;
 			socket.off('speed:stage:cardBoard', handleCardBoard);
 			socket.off('speed:stage:cardOverlap', handleCardOverlap);
 			socket.off('speed:stage:winner', handleWinner);
+			socket.off('speed:stage:next', handleNext);
 		},
 
 	}

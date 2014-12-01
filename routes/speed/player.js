@@ -18,7 +18,6 @@ module.exports.join = function(req, stage) {
 	}
 	var id = req.socket.speezId;
 	var player = new Player(req.socket, id, stage);
-	stage.players[id] = player;
 	var join = stage.join(player);
 	if(join.confirm === false){
 		req.io.respond({
@@ -29,7 +28,8 @@ module.exports.join = function(req, stage) {
 		return;
 	}
 	player.name = join.name;
-	var playerData = _.pick(player, ['id', 'name', 'points', 'block', 'fazt']);
+	player.avatar = join.name;
+	var playerData = _.pick(player, ['id', 'name', 'points', 'block', 'fazt', 'avatar']);
 	console.log(playerData);
 	stage.socket.emit('speed:stage:join', playerData);
 	req.io.respond(_.extend({ confirm: true, stageId: stage.id }, playerData));
@@ -57,6 +57,12 @@ module.exports.messages = {
 		}
 		req.stage.socket.emit('speed:stage:name', { playerId: req.player.id, name: req.player.name });
 		req.io.respond({name: req.player.name});
+	},
+
+	avatar: function(req){
+		req.player.avatar = req.data.avatar;
+		req.stage.socket.emit('speed:stage:avatar', { playerId: req.player.id, avatar: req.player.avatar });
+		req.io.respond({ avatar: req.player.avatar });
 	},
 
 	leave: function(req){
@@ -122,17 +128,33 @@ module.exports.messages = {
 			return;
 		}
 		req.io.respond(data);
-		var win = req.stage.isWin();
-		req.stage.socket.emit('speed:stage:cardBoard', { boardId: req.data.boardId, card: data.card, playerId: req.player.id, points: data.points, cardCount: req.player.cardCount, fazt: data.fazt });
-		if(win){
+		req.stage.socket.emit('speed:stage:cardBoard', { 
+			boardId: req.data.boardId, 
+			card: data.card, 
+			playerId: req.player.id, 
+			points: data.points, 
+			cardCount: req.player.cardCount, 
+			fazt: data.fazt 
+		});
+		// winner
+		var winResponse = req.stage.isWin();
+		if(winResponse){
 			req.stage.eachPlayer(function(player){
-				if(player.id === win){
-					player.socket.emit('speed:player:winner', { winner: true });
+				var points = 0;
+				if(winResponse.bestBlocker === player.id){
+					points += winResponse.bestBlockerPoints;
+				}
+				if(winResponse.bestFazt === player.id){
+					points += winResponse.bestFaztPoints;
+				}
+				if(player.id === winResponse.winner){
+					points += winResponse.points;
+					player.socket.emit('speed:player:winner', { winner: true, points: points });
 				} else {
-					player.socket.emit('speed:player:winner', { winner: false });
+					player.socket.emit('speed:player:winner', { winner: false, points: points });
 				}
 			});
-			req.stage.socket.emit('speed:stage:winner', win);
+			req.stage.socket.emit('speed:stage:winner', winResponse);
 			return;
 		}
 		if(!req.stage.isAnyMoveExist()){

@@ -50,6 +50,7 @@ var moduel = (function(window){
 		this.minScaleY = options.minHeight / options.height;
 		this.scaleX = 1;
 		this.scaleY = 1;
+		this.enable = true;
 
 		if(this.init){
 			this.init();
@@ -107,6 +108,9 @@ var moduel = (function(window){
 
 	// Public
 	Layout.prototype.resize = function(width, height) {
+		if(!this.enable){
+			return;
+		}
 
 		this.scaleX = width / this.originalWidth;
 		this.scaleX = Math.min(this.maxScaleX, this.scaleX);

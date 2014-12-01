@@ -7,6 +7,7 @@ var mainState = (function(){
 	var menuArea;
 	var buttons;
 	var logo;
+	var logoO;
 	var bbLogo;
 	var btnJoinStage;
 	var btnBecomeStage;
@@ -17,6 +18,10 @@ var mainState = (function(){
 
 	var textJoin;
 	var textOr;
+
+	// avatar
+	var avatar;
+	var avatarTimeline;
 
 	// header
 	var header;
@@ -32,12 +37,13 @@ var mainState = (function(){
 
 		// logo
 
-		logo = game.add.sprite(originalWidthCenter + 20, 180, 'logo');
+		logo = game.add.sprite(originalWidthCenter, 125, 'logo');
 		logo.anchor.set(0.5);
-		logo.width = 461;
-		logo.height = 174;
-
 		container.addChild(logo);
+
+		logoO = game.add.sprite(originalWidthCenter, 310, 'logoO');
+		logoO.anchor.set(0.5);
+		container.addChild(logoO);
 
 	    var buttonOptions = {
 	    	color: 0xe2e2e2,
@@ -101,11 +107,11 @@ var mainState = (function(){
     		.addClass('tbxJoin')
     		.css({
 				position: 'absolute',
-				'background-color': '#FFD646',
+				'background-color': common.toRgb(_.sample(palette)),
 				'text-align': 'center',
 				'font-family': 'Montserrat, FontAwesome'
     		})
-    		.attr('placeholder', '\uf0e7')
+    		.attr('placeholder', '\uf064')
     		.focusout(onJoinTextFocusOut)
     		.focusin(onJoinTextFocusIn)
     		.keydown(onJoinTextKeyDown)
@@ -114,7 +120,7 @@ var mainState = (function(){
 		$('#tbxJoin').on('touchstart', function() {
 	  		$(this).attr('type', 'number');
 		});
-		$('#tbxJoin').on('keydown blur', function() {
+		$('#tbxJoin').on('blur', function() {
 	  		$(this).attr('type', 'text');
 		});
 
@@ -134,7 +140,7 @@ var mainState = (function(){
 		header.addLeft(headerButton);
 
 		if(config.isLocal){
-			drawTest();
+			// drawTest();
 		}
 	}
 
@@ -145,13 +151,42 @@ var mainState = (function(){
 		game.add.existing(btnTestStage);
 	}
 
+	function avatarAnimation(){
+		if(avatarTimeline){
+			avatarTimeline.kill();
+		}
+		avatarTimeline = new TimelineMax({ onComplete: function(item){
+			item.timeline.kill();
+			item.destroy();
+		}, onCompleteParams: [avatar] });
+		if(avatar){
+			avatarTimeline.to(avatar, 1, { alpha: 0, ease: Elastic.easeIn });
+		}
+
+		avatar = game.add.sprite(originalWidthCenter, 250, _.sample(avatarNames) + '_head');
+		avatar.alpha = 0;
+		avatar.anchor.set(0.5);
+		container.addChild(avatar);
+
+		avatar.timeline = new TimelineMax({ repeat: -1, yoyo: true });
+		avatar.timeline.to(avatar, 1, { y: '-=20', ease: Power2.easeInOut });
+		
+		avatarTimeline.to(avatar, 1, { alpha: 1, ease: Elastic.easeOut });
+		avatarTimeline.add(avatarAnimation, 4);
+	}
+
 	function onJoinTextFocusOut(event){
+		Layout.instance.enable = true;
+		_.delay(function(){
+			Layout.instance.resize(game.width, game.height);
+		}, 2000);
 		$('#tbxJoin')
 			.removeClass('focus')
-			.attr('placeholder', '\uf0e7');
+			.attr('placeholder', '\uf064');
 	}
 
 	function onJoinTextFocusIn(event){
+		Layout.instance.enable = false;
 		$('#tbxJoin')
 			.addClass('focus')
 			.removeClass('error')
@@ -192,8 +227,8 @@ var mainState = (function(){
 		$('#tbxJoin').css({ 
 			left: x + 'px',
 			top: y + 'px',
-			width: width * (detector.mobile() ? 0.9 : 1) +'px',
-			height: height * (detector.mobile() ? 0.9 : 1) + 'px',
+			width: width * (detector.mobile() && detector.os().toLowerCase() === 'ios' ? 0.9 : 1) +'px',
+			height: height * (detector.mobile() && detector.os().toLowerCase() === 'ios' ? 0.9 : 1) + 'px',
 			'border-width': (5 * Layout.instance.minScale) + 'px',
 			'font-size': (60 * Layout.instance.minScale) + 'px', 
 			'line-height': (80 * Layout.instance.minScale) + 'px', 
@@ -236,19 +271,20 @@ var mainState = (function(){
 		colors = _.shuffle(colors);
 		player = {
 			winner: true,
-			name: 'Cow',
+			name: 'Zeeps',
 			game: {
-				boardCount: 2,
+				boardCount: 4,
 				hand: [],
 				boards: [
 					{ color: colors[0] },
 					{ color: colors[1] },
 					{ color: colors[2] },
-					// { color: colors[3] },
+					{ color: colors[3] },
 				],
 				cardCount: 6,
 				cardTotal: 6,
-			}
+			},
+			avatar: 'Zeeps',
 		}
 		player.game.hand.push(1);
 		player.game.hand.push(_.random(0,9));
@@ -301,6 +337,7 @@ var mainState = (function(){
 			stageId: data.stageId,
 			block: data.block,
 			fazt: data.fazt,
+			avatar: data.avatar,
 		}
 		$('#tbxJoin').remove();
 		game.state.start('lobbyPlayer');
@@ -309,10 +346,8 @@ var mainState = (function(){
 	return {
 
 		preload: function() {
+			// common.flipOrientation('landscape');
 			common.flipOrientation('portrait');
-		},
-
-		create: function(){
 
 			layout = new Layout({
 				game: game,
@@ -320,9 +355,12 @@ var mainState = (function(){
 	        	height: originalHeight,
 	        	isDebug: false,
 			});
+		},
 
+		create: function(){
 			// Draw things
 			drawGui();
+			_.delay(avatarAnimation, 200);
 			common.addLogo('logo', menuArea);
 			common.addLogo('beta', menuArea);
 
@@ -331,6 +369,9 @@ var mainState = (function(){
 
 		shutdown: function(){
 			removeDom();
+			if(avatarTimeline){
+				avatarTimeline.kill();
+			}
 		},
 
 		resize: function (width, height) {

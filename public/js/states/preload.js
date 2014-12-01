@@ -11,14 +11,15 @@ var preloadState = (function(){
 	function drawGui(){
         preloaderArea = new com.LayoutArea(0, 0, originalWidth, originalHeight);
 		container = game.add.sprite();
-		preloaderArea.attach(container, {width: originalWidth, height: originalHeight });
+		preloaderArea.attach(container, { width: originalWidth, height: originalHeight });
 		game.stage.backgroundColor = 0x1e1e1e;
 
-        textProgress = game.add.text(game.world.centerX, game.world.centerY, 'Preloading', { font: "100px Arial", fill: "#ffffff", align: "center" });
+        textProgress = game.add.text(originalWidthCenter, originalHeightCenter, 'Preloading', { font: "100px Arial", fill: "#ffffff", align: "center" });
         textProgress.anchor.set(0.5);
 		container.addChild(textProgress);
 
 		data = { progress: 0 };
+
 	}
 
 	function updateProgress(){
@@ -39,13 +40,20 @@ var preloadState = (function(){
 			// gui
 			drawGui();
 
+			Layout.instance.resize(game.width, game.height);
+
 			// images
 			game.load.image('bblogo', 'images/bros_logo.png');
-			game.load.image('logo', 'images/speez_logo_tagline.png');
+			game.load.image('logo', 'images/speez_logo.png');
+			game.load.image('logoO', 'images/speez_logo_o.png');
 			game.load.image('beta', 'images/beta.png');
 
 			// creatures
-			game.load.image('zumi', 'images/avatar_01.png');
+			for (var i = 0; i < avatarNames.length; i++) {
+				var number = common.addZeroes(i+1, 2);
+				game.load.image(avatarNames[i], 'images/avatar_' + number + '.png');
+				game.load.image(avatarNames[i] + '_head', 'images/avatar_' + number + '_head.png');
+			};
 
 			// Sounds
 			game.load.audio('button/down', ['audio/fx/button/down.mp3']);
@@ -98,6 +106,8 @@ var preloadState = (function(){
 		create: function(){
 			textProgress.text = 'Preloaded';
             game.state.start('main');
+
+            game.add.text(-1000, 0, '', { font: '30px FontAwesome'});
 		},
 
 		shutdown: function(){

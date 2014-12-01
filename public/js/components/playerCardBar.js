@@ -23,11 +23,6 @@ com.speez.components.PlayerCardBar = (function(){
 		game.add.existing(this);
 
 		// Background
-		this.background = game.add.graphics();
-		this.background.beginFill(this.options.color);
-		this.background.drawRect(0, 0, width, height);
-		this.addChild(this.background);
-
 		this.foreground = game.add.graphics();
 		this.foreground.beginFill(this.options.colorForeground);
 		this.foreground.drawRect(0, 0, width, height);
@@ -39,24 +34,17 @@ com.speez.components.PlayerCardBar = (function(){
 		this.addChild(this.foregroundSprite);
 
 		this.area = new com.LayoutArea(x, y, width, height, { isDebug: false });
-		this.area.attach(this.background, {
-			mode: Layout.STRETCH,
-			width: width,
-			height: height,
-		});
 		this.area.attach(this.foregroundSprite, {
 			mode: Layout.STRETCH,
 			width: width,
 			height: height,
 		});
 
-		this.flashLastTimeline = new TimelineMax({ paused: true, repeat: -1 });
-		this.flashLastTimeline.to(this.foreground, this.options.lastOneTime, { colorProps: { colorChange: this.options.colorLastOne } });
-		this.flashLastTimeline.to(this.foreground, this.options.lastOneTime, { colorProps: { colorChange: this.options.colorForeground } });
+		this.flashLastTimeline = new TimelineMax({ paused: true, repeat: -1, yoyo: true });
+		this.flashLastTimeline.to(this.foreground, this.options.lastOneTime, { alpha: 0 });
 
-		this.flashLastFiveTimeline = new TimelineMax({ paused: true, repeat: -1 });
-		this.flashLastFiveTimeline.to(this.foreground, this.options.lastFiveTime, { colorProps: { colorChange: this.options.colorLastFive } });
-		this.flashLastFiveTimeline.to(this.foreground, this.options.lastFiveTime, { colorProps: { colorChange: this.options.colorForeground } });
+		this.flashLastFiveTimeline = new TimelineMax({ paused: true, repeat: -1, yoyo: true });
+		this.flashLastFiveTimeline.to(this.foreground, this.options.lastFiveTime, { alpha: 0 });
 
 		this.events.onDestroy.add(this.onDestroy.bind(this));
 	}
@@ -75,6 +63,7 @@ com.speez.components.PlayerCardBar = (function(){
 	};
 
 	PlayerCardBar.prototype.flash = function(last) {
+		this.alpha = 1;
 		this.flashLastTimeline.stop();
 		this.flashLastFiveTimeline.stop();
 		if(last === 1){

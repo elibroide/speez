@@ -13,7 +13,7 @@ com.speez.components.Header = (function(){
 			height: height,
 			text: '',
 			format: {
-		        font: "50px Arial",
+		        font: "50px Montserrat",
 		        align: "center",
 		    },
 		    textColor: 0xffffff,
@@ -48,7 +48,7 @@ com.speez.components.Header = (function(){
 			mode: Layout.PROPORTIONAL_INSIDE,
 			alignHorizontal: Layout.ALIGN_CENTER,
 		});
-		this.title = game.add.text(0, height * 0.5, options.text, options.format);
+		this.title = game.add.text(0, height * 0.38, options.text, options.format);
 		this.title.anchor.set(0.5);
 		this.center.addChild(this.title);
 
@@ -63,10 +63,10 @@ com.speez.components.Header = (function(){
 
 		this.right = game.add.sprite();
 		this.headerArea.attach(this.right, { 
-			width: 10,
-			height: height,
 			mode: Layout.PROPORTIONAL_INSIDE,
 			alignHorizontal: Layout.ALIGN_RIGHT,
+			width: 10,
+			height: height,
 		});
 
 		this.addChild(this.center);
@@ -88,6 +88,16 @@ com.speez.components.Header = (function(){
 	Header.prototype.add = function(items, location, options) {
 	};
 
+	Header.prototype.addCenter = function(items, options) {
+		options = _.extend({
+			marginLeft: 10,
+			marginRight: 10,
+			marginTop: 10,
+			marginDown: 10,
+		}, options);
+		this.center.addChild(items);
+	};
+
 	Header.prototype.addLeft = function(items, options) {
 		options = _.extend({
 			marginLeft: 10,
@@ -97,6 +107,16 @@ com.speez.components.Header = (function(){
 		}, options);
 		this.left.addChild(items);
 	};
+
+	Header.prototype.addRight = function(items, options) {
+		options = _.extend({
+			marginLeft: 10,
+			marginRight: 10,
+			marginTop: 10,
+			marginDown: 10,
+		}, options);
+		this.right.addChild(items);
+	}
 
 	Header.prototype.tweenTitle = function(text, color, time) {
 		var textTimeline = new TimelineLite();

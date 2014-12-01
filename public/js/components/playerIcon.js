@@ -40,7 +40,6 @@ com.speez.components.PlayerIcon = (function(){
 		    },
 		    isShowStats: true,
 		    colorTime: 0.5,
-		    avatar: 'zumi',
 		    avatarStartY: 100,
 		    avatarTargetY: -10,
 		    avatarAngle: 10,
@@ -164,21 +163,37 @@ com.speez.components.PlayerIcon = (function(){
 		}
 	}
 
-	function onSetPlayerComplete(){
+	function createAvatar(){
+		this.avatar = game.add.sprite(0, 100, this.player.avatar);
+	    this.avatar.anchor.set(0.5, 0.75);
+	    this.avatar.events.onDestroy.add(onAvatarDestroy, this);
+	    this.addChildAt(this.avatar, this.children.indexOf(this.background));
+	    this.addChild(this.avatarMask);
+	    this.avatar.mask = this.avatarMask;
+	}
+
+	function removeAvatar(){
+		this.avatar.destroy();
+	    this.removeChild(this.avatarMask);
+	}
+
+	function animateAvatar(){
 		this.avatar.timeline = new TimelineMax({ yoyo: true, repeat: -1 });
 		this.avatar.timeline.add(onAvatarStart.bind(this));
-	    this.avatar.timeline.fromTo(this.avatar, this.options.avatarSpeed,
-	    	{ y: this.options.avatarTargetY, ease: Power4.easeInOut },
-	    	{ y: this.options.avatarTargetY + this.options.avatarJumpY, ease: Sine.easeInOut });
+	    this.avatar.timeline.to(this.avatar, this.options.avatarSpeed,
+	    	{ y: '+=' + this.options.avatarJumpY, ease: Sine.easeInOut });
 		// this.avatar.timeline.to(this.avatar, this.options.avatarSpeed, { angle: this.options.avatarAngle, ease: Sine.easeOut });
 		// this.avatar.timeline.to(this.avatar, this.options.avatarSpeed, { angle: 0, ease: Sine.easeIn });
 		// this.avatar.timeline.to(this.avatar, this.options.avatarSpeed, { angle: -this.options.avatarAngle, ease: Sine.easeOut });
 		// this.avatar.timeline.to(this.avatar, this.options.avatarSpeed, { angle: 0, ease: Sine.easeIn });
 	}
 
+	function onSetPlayerComplete(){
+		animateAvatar.call(this);
+	}
+
 	function onRemoveComplete(){
-		this.avatar.destroy();
-	    this.removeChild(this.avatarMask);
+		removeAvatar.call(this);
 	}
 
 	function onAvatarDestroy(){
@@ -189,6 +204,13 @@ com.speez.components.PlayerIcon = (function(){
 
 	function onPointsUpdate(){
 		this.points.text = Math.ceil(this.currentPoints).toString();
+	}
+
+	function onTweenColorStart(timeline){
+		if(this.colorTimeline){
+			this.colorTimeline.kill();
+		}
+		this.colorTimeline = timeline;
 	}
 
 	// public methods
@@ -258,12 +280,7 @@ com.speez.components.PlayerIcon = (function(){
 		}
 
 		// setting avatar
-		this.avatar = game.add.sprite(0, 100, this.options.avatar);
-	    this.avatar.anchor.set(0.5, 0.75);
-	    this.avatar.events.onDestroy.add(onAvatarDestroy, this);
-	    this.addChildAt(this.avatar, this.children.indexOf(this.background));
-	    this.addChild(this.avatarMask);
-	    this.avatar.mask = this.avatarMask;
+		createAvatar.call(this);
 
 		// animating set player
 		var timeline = new TimelineMax({ onComplete: onSetPlayerComplete, onCompleteScope: this });
@@ -355,6 +372,7 @@ com.speez.components.PlayerIcon = (function(){
 	    	return timeline;
 	    }
 	    timeline.add(this.removePopup(container, options), '+=' + options.stayTime);
+	    return timeline;
 	};
 
 	PlayerIcon.prototype.tweenColor = function(options) {
@@ -364,15 +382,13 @@ com.speez.components.PlayerIcon = (function(){
 			color: this.options.playerColor,
 		}, options);
 
-		if(this.colorTimeline){
-			this.colorTimeline.kill();
-		}
-		this.colorTimeline = new TimelineMax();
-		this.colorTimeline.to(this.background, this.options.colorTime, { colorProps: { changeColor: options.color } });
+		var timeline = new TimelineMax({ onStart: onTweenColorStart, onStartScope: this });
+		timeline.vars.onStartParams = [timeline];
+		timeline.to(this.background, this.options.colorTime, { colorProps: { changeColor: options.color } });
 		if(options.isReturn){
-			this.colorTimeline.to(this.background, this.options.colorTime, { colorProps: { changeColor: this.options.color } }, options.returnTime);
+			timeline.to(this.background, this.options.colorTime, { colorProps: { changeColor: this.options.color } }, options.returnTime);
 		}
-		return this.colorTimeline;
+		return timeline;
 	};
 
 	PlayerIcon.prototype.removeStats = function() {
@@ -414,6 +430,7 @@ com.speez.components.PlayerIcon = (function(){
 		}
 		this.flashTimeline = new TimelineMax({ repeat: -1, yoyo: true });
 		this.flashTimeline.to(this.cardCountBar, time, { alpha: 0, ease: Linear.easeNone });
+		return this.flashTimeline;
 	};
 
 	PlayerIcon.prototype.showIcon = function(options) {
@@ -446,7 +463,23 @@ com.speez.components.PlayerIcon = (function(){
 		timeline.to(this.name, this.options.changeNameTime * 0.5, { alpha: 1 }, 'half');
 		timeline.add(function(){
 			this.name.text = name;
-		}.bind(this), 'half')
+		}.bind(this), 'half');
+		return timeline;
+	}
+
+	PlayerIcon.prototype.changeAvatar = function(avatar) {
+		if(this.changeAvatarTimeline){
+			this.changeAvatarTimeline.kill();
+		}
+		var timeline = new TimelineMax();
+		this.changeAvatarTimeline = timeline;
+		timeline.to(this.avatar, 0.75, { y: this.options.avatarStartY });
+		timeline.add(removeAvatar.bind(this));
+		timeline.add(function(){
+			createAvatar.call(this);
+			timeline.to(this.avatar, 0.75, { y: this.options.avatarTargetY });
+			timeline.add(animateAvatar.bind(this));
+		}.bind(this));
 	}
 })()
 

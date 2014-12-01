@@ -129,8 +129,9 @@ com.speez.components.Card = (function(){
 	    this.proximity = new signals.Signal();
 	    this.appeared = new signals.Signal();
 
-	    this.background.alpha = 1;
+	    this.background.alpha = 0;
 		this.text.alpha = 1;
+		this.alpha = 0.75;
 	}
 
 	// Constructors
@@ -245,7 +246,9 @@ com.speez.components.Card = (function(){
 		timeline.add(function(){
 			Audio.instance.play('fx', 'card/draw');
 		})
-		timeline.to(this.text, this.options.spinTime, { angle: 360, ease: Back.easeInOut });
+		timeline.to(this, this.options.spinTime, { alpha: 1 }, 0);
+		timeline.to(this.background, this.options.spinTime, { alpha: 1 }, 0);
+		timeline.to(this.text, this.options.spinTime, { angle: 360, ease: Back.easeInOut }, 0);
 		timeline.addLabel('spinHalf', this.options.spinTime / 2);
 		timeline.to(this.background, this.options.spinTime / 2, { alpha: 1 }, 'spinHalf');
 		timeline.to(this.background, this.options.spinTime, { alpha: 1, colorProps: { colorChange: this.options.color } }, 0);

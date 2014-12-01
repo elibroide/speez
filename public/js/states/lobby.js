@@ -22,12 +22,12 @@ var lobbyState = (function(){
 		game.stage.backgroundColor = 0xe2e2e2;
 
 		// header
-		var headerHeight = 100;
+		var headerHeight = 70;
 		header = new com.speez.components.Header(originalWidth, headerHeight, {
 			alpha: 0,
 		});
-		var headerButton = game.add.text(50, headerHeight * 0.5, '\uf04c', {
-			font: "40px FontAwesome",
+		var headerButton = game.add.text(30, headerHeight * 0.5, '\uf04c', {
+			font: "20px FontAwesome",
 	        fill: "#000000",
 	        align: "center"
 		});
@@ -46,11 +46,29 @@ var lobbyState = (function(){
 		// Players Icons
 		iconsGroup = game.add.group();
 	    playersIcons = [];
-    	playersIcons.push(createNewIcon());
-		rearrangeIcons();	    
     	iconsGroup.x = originalWidthCenter;
     	iconsGroup.y = 210;
 		container.addChild(iconsGroup);
+
+		var keys = _.keys(stage.players);
+		if(keys.length === 0){
+    		playersIcons.push(createNewIcon());
+			rearrangeIcons();	    
+		} else {
+			keys = _.sortBy(keys, function(key){ return stage.players[key].icon });
+			for (var i = 0; i < keys.length; i++) {
+				var player = stage.players[keys[i]];
+				var icon = createNewIcon();
+				icon.setPlayer(player, false);
+				playersIcons.push(icon);
+				player.icon = playersIcons.indexOf(icon);
+			};
+			rearrangeIcons().progress(1);	    
+			if(playersIcons.length < 4){
+				playersIcons.push(createNewIcon())
+				rearrangeIcons();	    
+			}
+		}
 
 		var numberTextFormat = {
 			font: "22px Montserrat",
@@ -142,12 +160,6 @@ var lobbyState = (function(){
 
 	function handleNextLobby(data) {
 		drawGui();
-
-		_.each(_.keys(stage.players), function(key){
-			var player = stage.players[key];
-			player.icon = getAvailableIcon();
-			playersIcons[player.icon].setPlayer(player, false);
-		});
 	}
 
 	function handleJoin(data){
@@ -212,6 +224,7 @@ var lobbyState = (function(){
 	}
 
 	function handleLoad(data) {
+		console.log('handleLoad:', data);
 		stage.game = data;
 
 		if(timeline){
@@ -224,7 +237,7 @@ var lobbyState = (function(){
 		var lastIcon = playersIcons[playersIcons.length-1];
 		if(!lastIcon.player){
 			playersIcons.splice(playersIcons.length-1, 1);
-			timeline.to(lastIcon, 1, {alpha: 0});
+			timeline.to(lastIcon, 1, { alpha: 0 });
 		}
 		timeline.add(function() { 
 			_.invoke(playersIcons, 'setAvatarAnimation', false);
@@ -246,7 +259,19 @@ var lobbyState = (function(){
 		icon.changeName(data.name);
 	}
 
+	function handleAvatar(data){
+		console.log('handleAvatar:', data);
+
+		var player = stage.players[data.playerId];
+		var icon = playersIcons[player.icon];
+
+		player.avatar = data.avatar;
+		icon.changeAvatar(player.avatar);
+	}
+
 	function handleStageLeave(data){
+		console.log('handleStageLeave:', data);
+
 		stage = null;
 		game.state.start('main');
 	}
@@ -272,6 +297,7 @@ var lobbyState = (function(){
 			socket.on('speed:stage:ready', handleReady);
 			socket.on('speed:stage:load', handleLoad);
 			socket.on('speed:stage:name', handleName);
+			socket.on('speed:stage:avatar', handleAvatar);
 			
 			if(stage){
 				socket.emit('speed:stage:nextLobby', null, handleNextLobby);
@@ -290,6 +316,7 @@ var lobbyState = (function(){
 			socket.off('speed:stage:ready', handleReady);
 			socket.off('speed:stage:load', handleLoad);
 			socket.off('speed:stage:name', handleName);
+			socket.off('speed:stage:avatar', handleAvatar);
 		},
 
 	}

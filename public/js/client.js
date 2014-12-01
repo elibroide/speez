@@ -18,6 +18,22 @@ var stage;
 var player;
 var world;
 var Layout = com.Layout;
+var palette = [
+    0xFFD646,
+    0x019AFF,
+    0xEA1D00,
+    0xC500EE,
+    0x36DE49,
+];
+var avatarNames = [
+    "ZoZo",
+    "ZaZok",
+    "Ziki",
+    "ZamZi",
+    "Zot",
+    "Zumi",
+    "Zeeps"
+];
 
 var version = '0.0.0-10';
 
@@ -52,6 +68,13 @@ function init(){
     var audio = new Audio();
 
     game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.CANVAS, '');
+
+    game.stageColor = function(color){
+        if(color !== undefined){
+            game.stage.backgroundColor = common.getRgb(color);
+        }
+        return game.stage.backgroundColor;
+    }
 
     game.state.add('boot', bootState);
     game.state.add('preload', preloadState);

@@ -17,6 +17,17 @@ var common = {
 		originalHeightCenter = originalHeight * 0.5;
 	},
 
+	addZeroes: function(number, length, add){
+		if(add === undefined){
+			add = '0';
+		}
+		var textNumber = number.toString();
+		while(textNumber.length < length){
+			textNumber = add + textNumber;
+		}
+		return textNumber;
+	},
+
 	createBlankBackground: function(color){
 		if(color === undefined){
 			color = 0xffffff;
@@ -110,15 +121,7 @@ var common = {
 		if(time === undefined){
 			time = 0.1;
 		}
-		var stageChanger = {
-			stageColor: function(color){
-				if(color !== undefined){
-					game.stage.backgroundColor = common.getRgb(color);
-				}
-				return game.stage.backgroundColor;
-			}
-		}
-		return TweenLite.to(stageChanger, time, { colorProps: { stageColor: color }, onComplete: complete });
+		return TweenLite.to(game, time, { colorProps: { stageColor: color }, onComplete: complete });
 	},
 
 	tweenSpin: function(obj, time, options){

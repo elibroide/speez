@@ -6,13 +6,13 @@ var lobbyPlayerState = (function(){
 	var isReady;
 
 	// menu
+	var avatarPicker;
 	var blockNumber;
 	var lobbyArea;
 	var buttons;
 	var btnReady;
 	var headerText;
 	var textAreYou;
-	var textName;
 
 	// header
 	var header;
@@ -27,7 +27,7 @@ var lobbyPlayerState = (function(){
 		lobbyArea.attach(container, {width: originalWidth, height: originalHeight, onResize: onAreaResized, });
 		game.stage.backgroundColor = 0xe2e2e2;
 
-		blockNumber = new com.speez.components.BlockNumber(originalWidthCenter - 470 / 2, 145, 470, 125, player.stageId);
+		blockNumber = new com.speez.components.BlockNumber(originalWidthCenter - 470 / 2, 120, 470, 125, player.stageId);
 		game.add.existing(blockNumber);
 		container.addChild(blockNumber);
 
@@ -36,7 +36,7 @@ var lobbyPlayerState = (function(){
 	        fill: "#000000",
 	        align: "center"
 		}
-		headerText = game.add.text(originalWidthCenter, 115, 'GAME NUMBER', headerTextFormat);
+		headerText = game.add.text(originalWidthCenter, 80, 'GAME NUMBER', headerTextFormat);
 		headerText.anchor.set(0.5);
 		container.addChild(headerText);
 
@@ -47,7 +47,7 @@ var lobbyPlayerState = (function(){
 	    	textColorOver: 0x000000,
 	    	colorDown: 0x36de4a,
 			format: {
-		        font: "bold 44px Montserrat",
+		        font: "bold 44px Montserrat, FontAwesome",
 		        fill: "#ffffff",
 		        align: "center"
 		    },
@@ -55,7 +55,7 @@ var lobbyPlayerState = (function(){
 			borderColor: 0x000000,
 			radius: 10,
 	    }
-		btnReady = new MenuButton(0, 535, 476, 154, _.extend({ callback: handleReadyClicked, text: "READY" }, buttonOptions));
+		btnReady = new MenuButton(0, 814, 476, 154, _.extend({ callback: handleReadyClicked, text: "I'M READY" }, buttonOptions));
 
 		// texts
 		var textsFormat = {
@@ -63,16 +63,13 @@ var lobbyPlayerState = (function(){
 	        fill: "#000000",
 	        align: "center"
 		};
-		textAreYou = game.add.text(0, 430, 'ARE YOU?', textsFormat);
+		textAreYou = game.add.text(0, 540, 'YOUR NAME IS', textsFormat);
 		textAreYou.anchor.set(0.5);
-		textName = game.add.text(0, 650, 'YOU ARE', textsFormat);
-		textName.anchor.set(0.5);
 
 		// Group buttons
 		buttons = game.add.group();
 		buttons.add(btnReady);
 		buttons.add(textAreYou);
-		buttons.add(textName);
 
 		buttons.x = originalWidthCenter;
 		buttons.y = 0;
@@ -92,13 +89,23 @@ var lobbyPlayerState = (function(){
     		.appendTo('form')
     		.addClass('tbxChangeName')
     		.css({
-				'font-family': 'Montserrat, FontAwesome'
+    			'background-color': 'transparent',
+				'font-family': 'Montserrat, FontAwesome',
     		})
     		.attr('placeholder', 'ENTER NAME')
     		.focusout(onJoinTextFocusOut)
     		.focusin(onJoinTextFocusIn)
     		.change(onJoinTextChange)
+    		.keyup(onJoinTextChange)
     		.val(player.name);
+
+		// avatar picker
+		avatarPicker = new com.speez.components.AvatarPicker(originalWidthCenter, 400, {
+			avatar: player.avatar,
+			avatarNames: avatarNames,
+		});
+		avatarPicker.changed.add(handleAvatarPickerChange);
+		container.addChild(avatarPicker);
 
 		// header
 		var headerHeight = 100;
@@ -116,18 +123,16 @@ var lobbyPlayerState = (function(){
 		header.addLeft(headerButton);
 	}
 
-	
-
 	function onAreaResized(){
 		var width = 486 * Layout.instance.minScale;
 		var height = 128 * Layout.instance.minScale;
 		var x = container.x + (originalWidthCenter - 5) * Layout.instance.minScale - width * 0.5;
-		var y = container.y + 741 * Layout.instance.minScale - height * 0.5;
+		var y = container.y + 635 * Layout.instance.minScale - height * 0.5;
 		$('#tbxChangeName').css({ 
 			left: x + 'px',
 			top: y + 'px',
-			width: width * (detector.mobile() ? 0.9 : 1) + 'px',
-			height: height * (detector.mobile() ? 0.9 : 1) + 'px',
+			width: width * (detector.mobile() && detector.os().toLowerCase() === 'ios' ? 0.9 : 1) + 'px',
+			height: height * (detector.mobile() && detector.os().toLowerCase() === 'ios' ? 0.9 : 1) + 'px',
 			'border-width': (5 * Layout.instance.minScale) + 'px',
 			'font-size': (60 * Layout.instance.minScale) + 'px', 
 			'line-height': (80 * Layout.instance.minScale) + 'px',
@@ -148,35 +153,60 @@ var lobbyPlayerState = (function(){
 	// gui handlers
 
 	function onJoinTextFocusOut(event){
-		var val = $('#tbxChangeName').val();
-		if(!val){
-			btnReady.setEnable(true);
+		// set name
+		var val = $('#tbxChangeName').val().substring(0, 7);
+		$('#tbxChangeName').val(val);
+		if(val && player.name !== val){
+			socket.emit('speed:player:name', { name: name }, handleName);
+			toggleButtons(false);
+		} else {
 			$('#tbxChangeName').val(player.name);
+			btnReady.setEnable(true);
 		}
+
+		Layout.instance.enable = true;
+		_.delay(function(){
+			Layout.instance.resize(game.width, game.height);
+		}, 2000);
 	}
 
 	function onJoinTextFocusIn(event){
-		btnReady.setEnable(true);
+		Layout.instance.enable = false;
+		btnReady.setEnable(false);
 		$('#tbxChangeName')
 			.val('');
 	}
 
 	function onJoinTextChange(event){
-		var name = $('#tbxChangeName').val();
-		socket.emit('speed:player:name', { name: name }, handleName);
+		if(event.keyCode === 13){
+			$('#tbxChangeName').blur();
+			return;
+		}
+		var val = $('#tbxChangeName').val().substring(0, 7);
+		$('#tbxChangeName').val(val);
+
 	}
 
 	function handleReadyClicked(){		
 		isReady = !isReady;
+		
 		$('#tbxChangeName').prop('disabled', isReady);
-		socket.emit('speed:player:ready', { isReady: isReady });
-		btnReady.setText(isReady ? 'I\'M READY' : 'READY');
+		btnReady.setText(isReady ? '\uf058' : 'I\'M READY');
+		toggleButtons(false);
+		common.tweenStageColor(isReady ? 0x36de4a : 0xe2e2e2, function(){
+			socket.emit('speed:player:ready', { isReady: isReady }, handleReady);
+		}, 1);
 	}
 
 	function handleExitClicked(){
 		btnReady.setEnable(true);
 		$('#tbxChangeName').prop('disabled', true);
 		socket.emit('speed:player:leave', handleLeave);
+	}
+
+	function handleAvatarPickerChange(avatar){
+		player.avatar = avatar;
+		socket.emit('speed:player:avatar', { avatar: avatar }, handleAvatar);
 	}
 
 	// socket handlers
@@ -188,6 +218,7 @@ var lobbyPlayerState = (function(){
 
 	function handleLoad(data){
 		console.log('handleLoad:', data);
+		toggleButtons(false);
 		player.game = data;
 		player.game.cardTotal = player.game.cardCount;
 		
@@ -198,6 +229,17 @@ var lobbyPlayerState = (function(){
 		console.log('handleName:', data);
 		btnReady.setEnable(true);
 		player.name = data.name;
+		toggleButtons(true);
+	}
+
+	function handleReady(data){
+		console.log('handleName:', data);
+		toggleButtons(true);
+	}
+
+	function handleAvatar(data){
+		console.log('handleName:', data);
+		toggleButtons(true);
 	}
 
 	return {
@@ -219,7 +261,7 @@ var lobbyPlayerState = (function(){
 
 			// Draw things
 			drawGui();
-			common.addLogo('logo', lobbyArea);
+			// common.addLogo('logo', lobbyArea);
 			common.addLogo('beta', lobbyArea);
 
 			socket.on('speed:player:load', handleLoad);

@@ -25,6 +25,8 @@ var Network = (function(){
 	}
 
 	function onDisconnect(){
+		player = null;
+		stage = null;
 		game.state.start('main');
 	}
 
