@@ -5,7 +5,6 @@ var Network = (function(){
 	function Network(options){
 		this.options = _.extend({ 
 			address: config.address,
-
 		}, options);
 
 		socket = io.connect(this.options.address);

@@ -79,7 +79,9 @@ function middleLog(req, next){
 
 function getRoutes(app){
 	app.io.sockets.on('connection', function(socket){
-		connect.bind(socket)();
+		console.log(socket.handshake.headers);
+		console.log(socket.request);
+		connect.call(socket);
 	});
 	app.io.use(/^speed/, middleLog);
 	app.io.use(/^speed:stage/, checkStageActive);
@@ -97,6 +99,7 @@ function getRoutes(app){
 				this.socket.broadcast.to(this.roomId).emit(id, data, func);
 			}
 			stage.roomId = gameId + ':' + stage.id;
+			stage.send = stage.socket.emit.bind(stage.socket);
 			req.socket.stage = stage;
 			// req.socket.join(stage.roomId);
 			req.socket.gameId = gameId;
@@ -113,6 +116,7 @@ function getRoutes(app){
 				return;
 			}
 			var player = routes.player.join(req, stage);
+			player.send = player.socket.emit.bind(player.socket);
 			req.socket.join(stage.roomId);
 			req.socket.gameId = gameId;
 			req.socket.player = player;

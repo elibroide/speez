@@ -143,7 +143,7 @@ var lobbyPlayerState = (function(){
 
 	function toggleButtons(on){
 		$('#tbxChangeName').prop('disabled', !on);
-		buttons.callAll('setEnable', on);
+		buttons.callAll('setEnable', null, on);
 	}
 
 	function removeDom(){
@@ -157,7 +157,7 @@ var lobbyPlayerState = (function(){
 		var val = $('#tbxChangeName').val().substring(0, 7);
 		$('#tbxChangeName').val(val);
 		if(val && player.name !== val){
-			socket.emit('speed:player:name', { name: name }, handleName);
+			socket.emit('speed:player:name', { name: val }, handleName);
 			toggleButtons(false);
 		} else {
 			$('#tbxChangeName').val(player.name);
@@ -192,20 +192,23 @@ var lobbyPlayerState = (function(){
 		
 		$('#tbxChangeName').prop('disabled', isReady);
 		btnReady.setText(isReady ? '\uf058' : 'I\'M READY');
-		toggleButtons(false);
+
+		$('#tbxChangeName').prop('disabled', isReady);
+		avatarPicker.setEnable(!isReady);
+
 		common.tweenStageColor(isReady ? 0x36de4a : 0xe2e2e2, function(){
 			socket.emit('speed:player:ready', { isReady: isReady }, handleReady);
 		}, 1);
 	}
 
 	function handleExitClicked(){
-		btnReady.setEnable(true);
-		$('#tbxChangeName').prop('disabled', true);
+		toggleButtons(false);
 		socket.emit('speed:player:leave', handleLeave);
 	}
 
 	function handleAvatarPickerChange(avatar){
 		player.avatar = avatar;
+		toggleButtons(false);
 		socket.emit('speed:player:avatar', { avatar: avatar }, handleAvatar);
 	}
 
@@ -222,23 +225,22 @@ var lobbyPlayerState = (function(){
 		player.game = data;
 		player.game.cardTotal = player.game.cardCount;
 		
+		_gaq.push(['_trackEvent', 'speez', 'player', player.avatar]);
 		game.state.start('player');
 	}
 
 	function handleName(data){
 		console.log('handleName:', data);
-		btnReady.setEnable(true);
 		player.name = data.name;
 		toggleButtons(true);
 	}
 
 	function handleReady(data){
 		console.log('handleName:', data);
-		toggleButtons(true);
 	}
 
 	function handleAvatar(data){
-		console.log('handleName:', data);
+		console.log('handleAvatar:', data);
 		toggleButtons(true);
 	}
 

@@ -4,7 +4,11 @@ var _ = require('underscore');
 
 /* GET home page. */
 module.exports = function(req, res) {
-	res.render('index');
+	if(process.env.NODE_ENV === 'development'){
+		res.render('development', {title: 'SPEEZ - DEV'});
+	} else {
+		res.render('index', {title: 'SPEEZ - ARE YOU FAZT ENOUGH'});
+	}
 };
 
 module.exports.partials = function(req, res){

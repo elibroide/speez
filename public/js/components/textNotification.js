@@ -27,7 +27,7 @@ com.speez.components.TextNotification = (function(){
 			inTime: 0.75,
 			outTime: 0.75,
 			delayTime: 7.5,
-			margin: 10,
+			margin: 0,
 			textFormat: {
 		        font: "bold 79px Montserrat"
 		    },

@@ -9,7 +9,7 @@ com.speez.components.PlayerBoard = (function(){
 			gap: 30,
 			color: color,
 			arrowTime: 0.5,
-			diffuseAlpha: 0,
+			diffuseAlpha: 0.3,
 			onAlpha: 1,
 			halfAlpha: 0.6,
 			proximityTime: 0.2,
@@ -157,6 +157,7 @@ com.speez.components.PlayerBoard = (function(){
 			{ x: this.isLeft ? -(this.options.gap) : (this.options.radius + this.options.gap) },
 			{ x: this.isLeft ? -(this.options.radius + this.options.gap)*2 : (this.options.radius + this.options.gap)*2, ease: Sine.easeIn }
 		);
+		timeline.to(this, this.options.appearTime, {alpha: 0}, 0);
 		return timeline;
 	};
 

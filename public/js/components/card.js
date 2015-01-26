@@ -48,7 +48,7 @@ com.speez.components.Card = (function(){
 
 		}, options);
 		// threshold colors
-		this.thresholdHit = Card.THRESHOLD_NONE;
+		this.thresholdHit = undefined;
 
 		this.options = options;
 		this.index = index;
@@ -77,6 +77,8 @@ com.speez.components.Card = (function(){
 	    this.area.attach(this.backContainer, { width: options.width, height: options.height, mode: Layout.PROPORTIONAL_INSIDE });
 
 	    var overlapOutline = new Phaser.Graphics(game);
+	    overlapOutline.x = this.background.x;
+	    overlapOutline.y = this.background.y;
 	    overlapOutline.lineWidth = 5;
 	    overlapOutline.lineDash = 20;
 	    overlapOutline.lineColor = this.options.overlapOutlineLineColor;
@@ -132,6 +134,8 @@ com.speez.components.Card = (function(){
 	    this.background.alpha = 0;
 		this.text.alpha = 1;
 		this.alpha = 0.75;
+
+		this.events.onDestroy.add(onDestroy, this);
 	}
 
 	// Constructors
@@ -147,6 +151,9 @@ com.speez.components.Card = (function(){
 
 	// private methods
 
+	function onDestroy(){
+		this.area.destroy();
+	}
 
 	function getThreshold(){
 		var x = this.x;

@@ -10,7 +10,7 @@ com.speez.components.StageBoard = (function(){
 			radius: 300,
 			color: 0x00f00f,
 			diffuseColor: 0x000000,
-			backgroundAlpha: 0,
+			backgroundAlpha: 0.3,
 			card: 1,
 			cardFormat: {
 				font: "120px Montserrat",
@@ -35,13 +35,18 @@ com.speez.components.StageBoard = (function(){
 
 		// Background
 		this.background = game.add.graphics();
-		this.background.beginFill(this.options.diffuseColor);
-		this.background.lineStyle(5, this.options.color, 1, [10]);
+		this.background.alpha = this.options.backgroundAlpha;
+		this.background.beginFill(this.options.color);
 		this.background.drawCircle(0,0, this.options.radius);
 		this.background.circle = this.background.graphicsData[0];
 		this.background.colorChange = common.graphicsColorChange(0);
-		this.background.colorLineChange = common.graphicsColorChange(0, 'lineColor');
 		this.addChild(this.background);
+
+		this.foreground = game.add.graphics();
+		this.foreground.lineStyle(5, this.options.color, 1, [10]);
+		this.foreground.colorLineChange = common.graphicsColorChange(0, 'lineColor');
+		this.foreground.drawCircle(0,0, this.options.radius);
+		this.addChild(this.foreground);
 
 		this.backgroundMask = game.add.graphics();
 		this.backgroundMask.drawCircle(0,0, this.options.radius);
@@ -64,7 +69,7 @@ com.speez.components.StageBoard = (function(){
 		// card
 		createText.call(this);
 
-	    this.circleScales = [this.text.mask.scale, this.background.scale];
+	    this.circleScales = [this.text.mask.scale, this.background.scale, this.foreground.scale];
 	    this.text.visible = false;
 
 	    this.appeared = new signals.Signal();
@@ -160,9 +165,9 @@ com.speez.components.StageBoard = (function(){
 		timeline.to(oldCard, this.options.setCardTime, { onComplete: onSetCardPartComplete, onCompleteScope: this, onCompleteParams: [oldCard], y: -targetY * direction, ease: Linear.noEase }, 0);
 		timeline.to(this.text, this.options.setCardTime, { y: 0, ease: Linear.noEase }, 0);
 
-		timeline.to(this.background, this.options.setCardTime, { colorProps: { colorChange: this.options.color }, ease: Sine.easeOut }, 0);
+		timeline.to(this.background, this.options.setCardTime, { alpha: 1, ease: Sine.easeOut }, 0);
 		timeline.add(incomingEffect.animate(this.animationOptions), this.options.setCardTime + '-=' + 0.5);
-		timeline.to(this.background, this.options.setCardTime, { colorProps: { colorChange: this.options.diffuseColor }, ease: Sine.easeIn }, this.options.setCardTime);
+		timeline.to(this.background, this.options.setCardTime, { alpha: this.options.backgroundAlpha, ease: Sine.easeIn }, this.options.setCardTime);
 
 		timeline.to(this.circleScales, this.options.setCardTime, { x: 1.4, y: 1.4, ease: Sine.easeOut }, 0);
 		timeline.to(this.circleScales, this.options.setCardTime, { x: 1, y: 1, ease: Sine.easeIn }, this.options.setCardTime);
@@ -171,7 +176,7 @@ com.speez.components.StageBoard = (function(){
 	};
 
 	StageBoard.prototype.postUpdate = function() {
-		this.background.angle += this.rotateSpeed;
+		this.foreground.angle += this.rotateSpeed;
 	};
 
 	return StageBoard;

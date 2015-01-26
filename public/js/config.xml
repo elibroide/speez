@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+    <widget xmlns   = "http://www.w3.org/ns/widgets"
+        xmlns:gap   = "http://phonegap.com/ns/1.0"
+        id          = "com.broidebrothers.speez"
+        versionCode = "10" 
+        version     = "1.0.0" >
+
+    <!-- versionCode is optional and Android only -->
+
+    <name>Speez</name>
+
+    <description>
+        Are you FAZT enough? 
+    </description>
+
+    <author href="https://speez.co" email="broidebrothers@gmail.com">
+        Eliezer Broide - Broide Brothers
+    </author>
+
+    <preference name="orientation" value="portrait" />
+    <preference name="EnableViewportScale" value="true" />
+
+</widget>

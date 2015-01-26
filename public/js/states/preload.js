@@ -2,6 +2,9 @@
 
 var preloadState = (function(){
 
+	// data
+	var finished = 0;
+
 	// gui
 	var container;
 	var preloaderArea;
@@ -12,9 +15,21 @@ var preloadState = (function(){
         preloaderArea = new com.LayoutArea(0, 0, originalWidth, originalHeight);
 		container = game.add.sprite();
 		preloaderArea.attach(container, { width: originalWidth, height: originalHeight });
-		game.stage.backgroundColor = 0x1e1e1e;
+		// game.stage.backgroundColor = 0x1e1e1e;
 
-        textProgress = game.add.text(originalWidthCenter, originalHeightCenter, 'Preloading', { font: "100px Arial", fill: "#ffffff", align: "center" });
+		var logo = game.add.sprite(originalWidthCenter, originalHeightCenter * 0.5, 'logoGray');
+		logo.anchor.set(0.5);
+		container.addChild(logo);
+
+		var logoO = game.add.sprite(originalWidthCenter, originalHeightCenter + 50, 'logoO');
+		logoO.anchor.set(0.5);
+		container.addChild(logoO);
+
+		var avatar = game.add.sprite(originalWidthCenter, originalHeightCenter, 'preloadAvatar');
+		avatar.anchor.set(0.5);
+		container.addChild(avatar); 
+
+        textProgress = game.add.text(originalWidthCenter, originalHeightCenter * 1.5, 'Preloading', { font: "bold 50px Montserrat", fill: "#58585a", align: "center" });
         textProgress.anchor.set(0.5);
 		container.addChild(textProgress);
 
@@ -26,8 +41,40 @@ var preloadState = (function(){
 		textProgress.text = Math.ceil(data.progress) + "%";
 	}
 
+	function setFinished(){
+		if(++finished === 2){
+			if(config.isPlayer){
+				game.state.start('main');
+			} else {
+				game.state.start('lobby');
+			}
+		}
+	}
+
 	return {
 		preload: function(){
+
+			// fonts
+			var fontUrl;
+			if(config.isPackage){
+				fontUrl = [ 'style/font-awesome.min.css', 'style/fonts-package.css' ];
+			} else {
+				fontUrl = [ 'style/font-awesome.min.css', 'style/fonts.css' ];
+				fontUrl = [ 'style/font-awesome-package.min.css', 'style/fonts-package.css' ];
+			}
+			WebFont.load({
+				custom: {
+					families: ['FontAwesome', 'Montserrat'],
+	            	urls: fontUrl,
+				}, 
+				active: function(){
+					setFinished();
+				},
+				inactive: function(){
+  					console.log('Could not load font');
+  					setFinished();
+				}
+			});
 
 			// layout
 			layout = new Layout({
@@ -43,29 +90,14 @@ var preloadState = (function(){
 			Layout.instance.resize(game.width, game.height);
 
 			// images
-			game.load.image('bblogo', 'images/bros_logo.png');
-			game.load.image('logo', 'images/speez_logo.png');
-			game.load.image('logoO', 'images/speez_logo_o.png');
-			game.load.image('beta', 'images/beta.png');
+			game.load.image('lobbyDescription', 'images/lobby_description.png'); 
 
-			// creatures
+			// avatars
 			for (var i = 0; i < avatarNames.length; i++) {
 				var number = common.addZeroes(i+1, 2);
 				game.load.image(avatarNames[i], 'images/avatar_' + number + '.png');
 				game.load.image(avatarNames[i] + '_head', 'images/avatar_' + number + '_head.png');
 			};
-
-			// Sounds
-			game.load.audio('button/down', ['audio/fx/button/down.mp3']);
-			game.load.audio('button/up', ['audio/fx/button/up.mp3']);
-
-			// Countdown
-			// game.load.audio('countdown/1', ['audio/fx/countdown/One.wav']);
-			// game.load.audio('countdown/2', ['audio/fx/countdown/Two.wav']);
-			// game.load.audio('countdown/3', ['audio/fx/countdown/Three.wav']);
-			// game.load.audio('countdown/4', ['audio/fx/countdown/Four.wav']);
-			// game.load.audio('countdown/5', ['audio/fx/countdown/Five.wav']);
-			// game.load.audio('countdown/speed', ['audio/fx/countdown/Speed.wav']);
 
 			// *** Card ***
 			// pickup
@@ -104,10 +136,11 @@ var preloadState = (function(){
 		},
 
 		create: function(){
-			textProgress.text = 'Preloaded';
-            game.state.start('main');
-
+			textProgress.text = 'Loading Fonts';
+            
             game.add.text(-1000, 0, '', { font: '30px FontAwesome'});
+
+			setFinished();
 		},
 
 		shutdown: function(){

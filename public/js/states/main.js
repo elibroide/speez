@@ -16,9 +16,6 @@ var mainState = (function(){
 	var btnReady;
 	var btnChangeName;
 
-	var textJoin;
-	var textOr;
-
 	// avatar
 	var avatar;
 	var avatarTimeline;
@@ -29,7 +26,24 @@ var mainState = (function(){
 	// debug
 	var textLatency;
 
+	var help;
+
 	function drawGui(){
+		// header
+		var headerHeight = originalHeight * 0.125;
+		header = new com.speez.components.Header(originalWidth, headerHeight, {
+			alpha: 0,
+		});
+		var headerButton = game.add.text(50, headerHeight * 0.5, '\uf059', {
+			font: "65px FontAwesome",
+	        fill: "#000000",
+	        align: "center"
+		});
+		headerButton.anchor.set(0.5);
+	    headerButton.inputEnabled = true;
+	    headerButton.events.onInputDown.add(handleHelpClicked);
+		header.addLeft(headerButton);
+
 		menuArea = new com.LayoutArea(0, 0, originalWidth, originalHeight);
 		container = game.add.sprite();
 		menuArea.attach(container, {width: originalWidth, height: originalHeight, onResize: onAreaResized, });
@@ -45,7 +59,26 @@ var mainState = (function(){
 		logoO.anchor.set(0.5);
 		container.addChild(logoO);
 
-	    var buttonOptions = {
+		// header
+		var headerHeight = 100;
+		header = new com.speez.components.Header(originalWidth, headerHeight, {
+			alpha: 0,
+		});
+
+		// Draw components
+		if(config.isPlayer){
+			drawMobile();
+		} else {
+			drawStage();
+		}
+
+		if(config.isLocal){
+			// drawTest();
+		}
+	}
+
+	function drawMobile(){
+		var buttonOptions = {
 	    	color: 0xe2e2e2,
 	    	textColor: 0x000000,
 	    	colorOver: 0x000000,
@@ -67,9 +100,9 @@ var mainState = (function(){
 	        fill: "#000000",
 	        align: "center"
 		};
-		textJoin = game.add.text(0, 420, 'JOIN THE GAME', textsFormat);
+		var textJoin = game.add.text(0, 420, 'JOIN THE GAME', textsFormat);
 		textJoin.anchor.set(0.5);
-		textOr = game.add.text(0, 650, 'OR', textsFormat);
+		var textOr = game.add.text(0, 650, 'OR', textsFormat);
 		textOr.anchor.set(0.5);
 
 		// Group buttons
@@ -93,15 +126,17 @@ var mainState = (function(){
 		$('<style>')
     		.appendTo('form')
     		.text('input::-webkit-input-placeholder { font-size: 60 }');
-    	$('<button type="submit">')
-    		.css({
-    			position: 'absolute',
-    			margin: -1000,
-    		})
-    		.click(function(event){
-    			event.preventDefault();
-    		})
-    		.appendTo('form');
+		if(detector.os() && detector.os().toLowerCase().indexOf('android') === -1){
+			$('<button type="submit">')
+				.css({
+					position: 'absolute',
+					margin: -1000,
+				})
+				.click(function(event){
+					event.preventDefault();
+				})
+				.appendTo('form');
+		}
     	$('<input id="tbxJoin" type="text">')
     		.appendTo('form')
     		.addClass('tbxJoin')
@@ -117,31 +152,92 @@ var mainState = (function(){
     		.keydown(onJoinTextKeyDown)
     		.keyup(onJoinTextChange)
     		.change(onJoinTextChange);
-		$('#tbxJoin').on('touchstart', function() {
-	  		$(this).attr('type', 'number');
-		});
-		$('#tbxJoin').on('blur', function() {
-	  		$(this).attr('type', 'text');
-		});
+		if(detector.os() && detector.os().toLowerCase().indexOf('android') === -1){
+			$('#tbxJoin').on('touchstart', function() {
+		  		$(this).attr('type', 'number');
+			});
+			$('#tbxJoin').on('blur', function() {
+		  		$(this).attr('type', 'text');
+			});
+		}
+	}
 
-		// header
-		var headerHeight = 100;
-		header = new com.speez.components.Header(originalWidth, headerHeight, {
-			alpha: 0,
-		});
-		var headerButton = game.add.text(50, headerHeight * 0.5, '\uf059', {
-			font: "65px FontAwesome",
+	function drawStage(){
+		var textsFormat = {
+			font: "50px Montserrat",
 	        fill: "#000000",
 	        align: "center"
-		});
-		headerButton.anchor.set(0.5);
-	    headerButton.inputEnabled = true;
-	    headerButton.events.onInputDown.add(onQuestionClicked);
-		header.addLeft(headerButton);
+		};
+		var stageText = game.add.text(originalWidthCenter, originalHeightCenter, 'Connecting to Game Server', textsFormat);
+		stageText.anchor.set(0.5);
+		container.addChild(stageText);
+	}
 
-		if(config.isLocal){
-			// drawTest();
-		}
+	function drawHelp(){
+		var title = game.add.text(originalWidthCenter, 100, 'HELP ME', {
+			font: "bold 50px Montserrat",
+	        fill: "#ffffff",
+	        align: "center"
+		});
+	    title.anchor.set(0.5);
+
+	    var text = "1. Enter the address\n" + 
+	    	"   SPEEZ.CO from any\n" + 
+	    	"   Device - (PC/Smartphone\n" +
+	    	"   Tablet) and\n" +
+	    	"   CREATE A GAME.\n" +
+	    	"\n" +
+	    	"2. Enter the address\n" +
+	    	"    SPEEZ.CO from any\n" +
+	    	"    other Device and\n" + 
+	    	"    JOIN THE GAME.\n";
+	    var helpText = game.add.text(0, 200, text, {
+			font: "bold 35px Montserrat",
+	        fill: "#ffffff",
+	        align: "left"
+		});
+		helpText.x = originalWidthCenter - helpText.width/2;
+
+		var btnVideo = new MenuButton(originalWidthCenter, 705, 324, 64, {
+	    	color: 0x1e1e1e,
+	    	textColor: 0xffffff,
+	    	colorOver: 0xffffff,
+	    	textColorOver: 0x000000,
+			format: {
+		        font: "bold 30px FontAwesome",
+		        fill: "#ffffff",
+		        align: "center"
+		    },
+			borderWidth: 5,
+			borderColor: 0xffffff,
+			radius: 5,
+			text: '\uf16a',
+			callback: handleHelpVideoClicked,
+	    });
+
+		var btnContinue = new MenuButton(originalWidthCenter, 830, 324, 96, {
+	    	color: 0x009bff,
+	    	textColor: 0x1e1e1e,
+	    	colorOver: 0xffffff,
+	    	textColorOver: 0x000000,
+			format: {
+		        font: "bold 30px Montserrat",
+		        fill: "#ffffff",
+		        align: "center"
+		    },
+			borderWidth: 5,
+			borderColor: 0xffffff,
+			radius: 5,
+			text: 'GOT IT',
+			callback: handleHelpContinueClicked,
+	    });
+
+		help = new com.speez.components.PauseScreen(originalWidth, originalHeight);
+		game.add.existing(help);
+	    help.container.addChild(title);
+	    help.container.addChild(helpText);
+		help.container.addChild(btnContinue);
+		help.container.addChild(btnVideo);
 	}
 
 	function drawTest(){
@@ -265,6 +361,22 @@ var mainState = (function(){
 		game.state.start('lobby');
 	}
 
+	function handleHelpClicked(){
+		toggleButtons(false);
+		$('form').hide();
+		drawHelp();
+	}
+
+	function handleHelpVideoClicked(){
+		common.open('https://www.youtube.com/watch?v=meak65zqfGE');
+	}
+
+	function handleHelpContinueClicked(){
+		toggleButtons(true);
+		$('form').show();
+		help.destroy();
+	}
+
 	function handleTestingPlayerClicked(){
 		// mockup
 		var colors = [0xbf00d8, 0xd84100, 0xdbaf00, 0xa1ff00, 0x00c8cc, 0x0065bf];
@@ -363,8 +475,11 @@ var mainState = (function(){
 			_.delay(avatarAnimation, 200);
 			common.addLogo('logo', menuArea);
 			common.addLogo('beta', menuArea);
+			common.addLogo('feedback', menuArea);
 
 	  		Layout.instance.resize(game.width, game.height);
+
+	  		gameCount = 0;
 		},
 
 		shutdown: function(){

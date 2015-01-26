@@ -203,6 +203,7 @@ Stage.prototype.startGame = function() {
 	this.history = [];
 	this.lastCardTime = 0;
 	this.initStreak();
+	this.initStats();
 	this.state = Stage.STATE_SPEEDY;
 	this.emit(Stage.EVENT_START);
 };
@@ -212,7 +213,6 @@ Stage.prototype.playCardBoard = function(player, card, boardId) {
 		return { confirm: false, reason: 'not in play' };
 	}
 	var board = this.boards[boardId];
-	console.log('play', card, 'to', board.current);
 	if(board === undefined){
 		return {confirm: false, reason: 'no board'};
 	}
@@ -236,6 +236,7 @@ Stage.prototype.playCardBoard = function(player, card, boardId) {
 		}
 		return { confirm: true, points: points, fazt: fazt };
 	}
+	console.log("playCardBoard 1");
 	this.emit(Stage.EVENT_CARD_FAILED, player, card, board);
 	return { confirm: false, reason: 'failed', screw: this.checkScrewed(player, card, board) };
 };
@@ -336,12 +337,12 @@ Stage.prototype.isWin = function() {
 	this.winner.points += points;
 
 	// getting best blocker
-	var bestBlocker = this.getBest('block', false);
+	var bestBlocker = this.getBest('currentBlock', false);
 	if(bestBlocker){
 		bestBlocker.points += 300;
 		bestBlocker = bestBlocker.id;
 	}
-	var bestFazt = this.getBest('fazt', false);
+	var bestFazt = this.getBest('currentFazt', false);
 	if(bestFazt) {
 		bestFazt.points += 300;
 		bestFazt = bestFazt.id;
@@ -458,6 +459,7 @@ Stage.prototype.checkScrewed = function(player, card, board) {
 		// this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_SCREWED, { screw: board.currentPlayer.name, boardId: board.id });
 		this.emit(Stage.EVENT_ACHIEVE, board.currentPlayer, Stage.ACHIEVE_SCREW, { screwId: player.id, screw: player.name, boardId: board.id }, this.getScrewPoints());
 		board.currentPlayer.block++;
+		board.currentPlayer.currentBlock++;
 		return board.currentPlayer.name;
 	}
 	return null;
@@ -468,6 +470,13 @@ Stage.prototype.checkFirstOfGame = function(player, card, board) {
 		this.firstPlayerGame = player;
 		this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_FIRST_OF_GAME, { }, 10);
 	}
+};
+
+Stage.prototype.initStats = function() {
+	this.eachPlayer(function(player){
+		player.currentBlock = 0;
+		player.currentFazt = 0;
+	})
 };
 
 Stage.prototype.initStreak = function() {
@@ -502,6 +511,7 @@ Stage.prototype.checkStreak = function(player) {
 		return false;
 	}
 	player.fazt++;
+	player.currentFazt++;
 	// Notify achievement
 	// this.emit(Stage.EVENT_ACHIEVE, player, Stage.ACHIEVE_STREAK, { fazt: fazt });
 	return true;

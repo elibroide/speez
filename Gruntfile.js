@@ -2,33 +2,44 @@ module.exports = function(grunt) {
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
 
-    sass: {
+    concat: {
       options: {
-        includePaths: ['bower_components/foundation/scss']
+        separator: ';',
       },
       dist: {
-        options: {
-          outputStyle: 'compressed'
-        },
+        src: ['public/js/**/*.js', '!public/js/external/*.js', '!public/js/dist/*.js'],
+        dest: 'public/dist/speez.js',
+      },
+    },
+
+    uglify: {
+      options: {
+        sourceMap: true,
+      },
+      my_target: {
         files: {
-          'public/style/style.css': 'scss/app.scss'
-        }        
+          'public/dist/speez.min.js': [
+            'public/dist/speez.js'
+          ]
+        }
       }
     },
 
     watch: {
-      grunt: { files: ['Gruntfile.js'] },
+      scripts: {
+        files: ['public/js/**/*.js', 'Gruntfile.js'],
+        tasks: ['concat', 'uglify'],
+        options: {
+          spawn: false,
+        },
+      },
+    },
 
-      sass: {
-        files: 'scss/**/*.scss',
-        tasks: ['sass']
-      }
-    }
   });
 
-  grunt.loadNpmTasks('grunt-sass');
+  grunt.loadNpmTasks('grunt-contrib-uglify');
+  grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-watch');
 
-  grunt.registerTask('build', ['sass']);
-  grunt.registerTask('default', ['build','watch']);
+  grunt.registerTask('default', ['concat', 'uglify', 'watch']);
 }

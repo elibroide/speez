@@ -21,7 +21,7 @@ function getConfig(){
 function handleAchieve(player, achievment, data, points){
 	console.log(this.id + ' -> ' + player.id + ':' + achievment, '[', data, ']', points);
 	var sendData = { achievement: achievment, data: data, points: points };
-	player.socket.emit('speed:player:achieve', sendData);
+	player.send('speed:player:achieve', sendData);
 	this.socket.emit('speed:stage:achieve', _.extend(sendData, { player: player.id }));
 }
 
@@ -39,7 +39,7 @@ module.exports.create = function(req, id){
 
 module.exports.disconnect = function(socket){
 	socket.stage.eachPlayer(function(player){
-		player.socket.emit('speed:player:leave', {
+		player.send('speed:player:leave', {
 			code: Player.QUIT_STAGE_DISCONNECTED,
 			reason: 'stage disconnected'
 		});
@@ -54,7 +54,7 @@ module.exports.messages = {
 
 	stageLeave: function(req){
 		req.stage.eachPlayer(function(player){
-			player.socket.emit('speed:player:leave', {
+			player.send('speed:player:leave', {
 				code: Player.QUIT_STAGE_DISCONNECTED,
 				reason: 'stage left'
 			});
@@ -71,7 +71,7 @@ module.exports.messages = {
 		req.stage.startGame();
 		// req.io.room(req.stage.roomId).broadcast('speed:player:start');
 		req.stage.broadcast('speed:player:start');
-		req.stage.socket.emit('speed:stage:start');
+		req.stage.send('speed:stage:start');
 	},
 	
 	speedy: function(req){
@@ -81,7 +81,7 @@ module.exports.messages = {
 		req.stage.speedy();
 
 		req.stage.eachPlayer(function(player){
-			player.socket.emit('speed:player:speedy');
+			player.send('speed:player:speedy');
 		});
 		req.io.respond();
 	},
@@ -92,7 +92,7 @@ module.exports.messages = {
 			return { stage: _.pick(board, [ 'current', 'color' ]), player: _.pick(board, ['color']) };
 		});
 		req.stage.eachPlayer(function(player){
-			player.socket.emit('speed:player:play', _.pluck(boards, 'player'));
+			player.send('speed:player:play', _.pluck(boards, 'player'));
 		});
 		req.io.respond(_.pluck(boards, 'stage'));
 	},
@@ -101,7 +101,7 @@ module.exports.messages = {
 		if(!req.stage.setLoaded(req.player)){
 			return;
 		}
-		req.stage.socket.emit('speed:stage:next');
+		req.stage.send('speed:stage:next');
 		req.stage.broadcast('speed:player:next');
 	},
 

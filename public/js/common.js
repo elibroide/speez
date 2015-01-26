@@ -8,6 +8,9 @@ var common = {
 		if(gameOrientation === targetOrientation){
 			return;
 		}
+		if(detector.mobile() && !config.isFireTV){
+			screen.lockOrientation(targetOrientation);
+		}
 		console.log('Flipping ' + gameOrientation + ' to ' + targetOrientation);
 		gameOrientation = targetOrientation;
 		var temp = originalWidth;
@@ -218,14 +221,14 @@ var common = {
 
 	graphicsColorChange: function(i, property){
 		if(property === undefined){
-			property = 'fillColor';
+			property = '_fillTint';
 		}
 		return function(color){
 			if(color !== undefined){
 				this.color = common.getRgb(color);
 				this.graphicsData[i][property] = this.color;
 			}
-			return this.graphicsData[i].fillColor;
+			return this.graphicsData[i][property];
 		}
 	},
 
@@ -293,21 +296,63 @@ var common = {
 	},
 
 	addLogo: function(type, area){
-		if(type === 'logo'){
-			var bbLogo = new com.speez.components.Logo(originalWidth - 10, originalHeight - 10, originalWidth, originalHeight);
-		    bbLogo.logo.anchor.set(1);
-			game.add.existing(bbLogo);
-			area.attach(bbLogo, { scale: 1, width: originalWidth, height: originalHeight, alignHorizontal: Layout.ALIGN_RIGHT, alignVertical: Layout.ALIGN_BOTTOM });
-		} else if(type === 'beta'){
-			var beta = new com.speez.components.Logo(originalWidth, 0, originalWidth, originalHeight, {
-				logo: 'beta',
-			});
-		    beta.logo.anchor.set(1, 0);
-			game.add.existing(beta);
-			area.attach(beta, { width: originalWidth, height: originalHeight, alignHorizontal: Layout.ALIGN_RIGHT, alignVertical: Layout.ALIGN_TOP });
+		switch(type){
+			case 'logo':
+				var bbLogo = new com.speez.components.Logo(originalWidth - 10, originalHeight - 10, originalWidth, originalHeight, {
+					scale: 0.5
+				});
+			    bbLogo.logo.anchor.set(1);
+				game.add.existing(bbLogo);
+				area.attach(bbLogo, { scale: 1, width: originalWidth, height: originalHeight, alignHorizontal: Layout.ALIGN_RIGHT, alignVertical: Layout.ALIGN_BOTTOM });
+				break;
+			case 'beta':
+				var beta = new com.speez.components.Logo(originalWidth, 0, originalWidth, originalHeight, {
+					logo: 'beta',
+				});
+			    beta.logo.anchor.set(1, 0);
+				game.add.existing(beta);
+				area.attach(beta, { width: originalWidth, height: originalHeight, alignHorizontal: Layout.ALIGN_RIGHT, alignVertical: Layout.ALIGN_TOP });
+				break;
+			case 'feedback':
+				var format = {
+					font: '65px FontAwesome',
+					fill: '#000000',
+					align: 'center',
+				}
+				var feedback = game.add.text(25, originalHeight - 3, '\uf0e0', format);
+				feedback.inputEnabled = true;
+				feedback.events.onInputDown.add(function(){
+					common.open('mailto:broidebrothers@gmail.com?Subject=SPEEZ%20Feedback');
+				});
+				feedback.anchor.set(0, 1);
+				var facebook = game.add.text(feedback.width * 2, originalHeight, '\uf082', format);
+				facebook.inputEnabled = true;
+				facebook.events.onInputDown.add(function(){
+					common.open('https://www.facebook.com/Speez.co');
+				});
+				facebook.anchor.set(0, 1);
+				var text = game.add.text(25, originalHeight - facebook.height, 'Feedback', {
+					font: '25px FontAwesome',
+					fill: '#000000',
+					align: 'center',
+				});
+				text.anchor.set(0, 1);
+				var container = game.add.sprite();
+				container.addChild(text);
+				container.addChild(feedback);
+				container.addChild(facebook);
+				area.attach(container, { width: originalWidth, height: originalHeight, alignHorizontal: Layout.ALIGN_LEFT, alignVertical: Layout.ALIGN_BOTTOM });
+				break;
 		}
+	},
 
-	}
+	open: function(url, ignore){
+		var name = '_blank';
+		if(!ignore && detector.mobile() && detector.os().toLowerCase().indexOf('ios') > -1 && navigator.userAgent.toLowerCase().indexOf("safari") > -1){
+			name = '_parent';
+		}
+		window.open(url, name);
+	},
 }
 
 

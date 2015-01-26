@@ -91,7 +91,7 @@ com.speez.components.PlayerIcon = (function(){
 	    this.cardCountBar.beginFill(this.options.cardCountBarColor);
 	    this.cardCountBar.drawRoundedRect(0, -this.options.cardCountBarMargin, this.options.width, this.options.cardCountBarHeight, this.options.cardCountBarRadius);
 	    this.cardCountBar.colorChange = common.graphicsColorChange(0);
-	    this.cardCountBar.graphicsData[0].points[2] = this.options.width * this.options.cardCountBarProgress;
+	    this.cardCountBar.graphicsData[0].shape.width = this.options.width * this.options.cardCountBarProgress;
 	    this.addChild(this.cardCountBar);
 
 	    // Emitter 
@@ -173,6 +173,9 @@ com.speez.components.PlayerIcon = (function(){
 	}
 
 	function removeAvatar(){
+		if(this.avatar.timeline){
+			this.avatar.timeline.kill();
+		}
 		this.avatar.destroy();
 	    this.removeChild(this.avatarMask);
 	}
@@ -218,13 +221,14 @@ com.speez.components.PlayerIcon = (function(){
 	PlayerIcon.prototype.setToJoin = function() {
 		this.player = null;
 		
-		var timeline = new TimelineMax({ onComplete: onRemoveComplete, onCompleteScope: this });
+		var timeline = new TimelineMax();
 		timeline.to([this.name, this.points], this.options.setPlayerFadeInTime, { alpha: 0 }, 0);
 		if(this.options.isShowStats){
 			timeline.to([this.victories, this.blocks, this.fazt, this.victoriesSymbol, this.blocksSymbol, this.faztSymbol], 
 				this.options.setPlayerFadeInTime, { alpha: 0 }, 0);
 		}
 		timeline.to(this.avatar, this.options.setPlayerFadeInTime, { y: this.options.avatarStartY });
+		timeline.add(onRemoveComplete.bind(this));
 		timeline.addLabel('fade');
 		timeline.to(this.background, this.options.setPlayerFadeOutTime, { colorProps: { changeColor: this.options.joinColor } });
 		timeline.to(this.join, this.options.setPlayerFadeOutTime, { alpha: 1 }, 0);
@@ -420,7 +424,7 @@ com.speez.components.PlayerIcon = (function(){
 
 	PlayerIcon.prototype.setCards = function(progress) {
 		var timeline = new TimelineMax();
-		timeline.to(this.cardCountBar.graphicsData[0].points, 1, { '2': this.options.width * progress });
+		timeline.to(this.cardCountBar.graphicsData[0].shape, 1, { width: this.options.width * progress });
 		return timeline;
 	};
 

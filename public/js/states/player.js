@@ -3,8 +3,8 @@
 var playerState = (function(){
 
 	// data
-	var state = 'start';
-	var isReady = false;
+	var state;
+	var isReady;
 	var winnerColor;
 
 	// gui
@@ -38,6 +38,10 @@ var playerState = (function(){
 
 	var winnerText;
 	var btnReady;
+
+	var btnContinue;
+	var btnExit;
+	var pause;
 
 	function drawGui(){
 		// sizes
@@ -76,8 +80,8 @@ var playerState = (function(){
 		});
 		headerButton.anchor.set(0.5);
 	    headerButton.inputEnabled = true;
-	    // headerButton.events.onInputDown.add(handleStageLeaveClicked);
-		header.addLeft(headerButton);debugger;
+	    headerButton.events.onInputDown.add(handlePauseClicked);
+		header.addLeft(headerButton);
 		var avatar = game.add.sprite(-50, headerHeight * 0.5, player.avatar + '_head');
 		avatar.scale.set(0.4);
 		avatar.anchor.set(0.5);
@@ -129,12 +133,61 @@ var playerState = (function(){
 		});
 	}
 
+	function drawPause(){
+		var text = game.add.text(originalWidthCenter, 215, 'PAUZE', {
+			font: "bold 50px FontAwesome",
+	        fill: "#ffffff",
+	        align: "center"
+		});
+	    text.anchor.set(0.5);
+
+		btnContinue = new MenuButton(originalWidthCenter, 470, 486, 144, {
+	    	color: 0x009bff,
+	    	textColor: 0x1e1e1e,
+	    	colorOver: 0xffffff,
+	    	textColorOver: 0x000000,
+			format: {
+		        font: "bold 30px Montserrat",
+		        fill: "#ffffff",
+		        align: "center"
+		    },
+			borderWidth: 5,
+			borderColor: 0xffffff,
+			radius: 5,
+			text: 'CONTINUE',
+			callback: handleContinueClicked,
+	    });
+
+	    btnExit = new MenuButton(originalWidthCenter, 680, 486, 128, {
+	    	color: 0x1e1e1e,
+	    	textColor: 0xffffff,
+	    	colorOver: 0xffffff,
+	    	textColorOver: 0x000000,
+			format: {
+		        font: "bold 30px Montserrat",
+		        fill: "#ffffff",
+		        align: "center"
+		    },
+			borderWidth: 5,
+			borderColor: 0xffffff,
+			radius: 5,
+			text: 'END GAME',
+			callback: handleExitClicked,
+	    });
+
+		pause = new com.speez.components.PauseScreen(originalWidth, originalHeight);
+		game.add.existing(pause);
+		pause.container.addChild(text);
+		pause.container.addChild(btnExit);
+		pause.container.addChild(btnContinue);
+	}
+
 	function drawAchieveText(text){
 		if(achieveText){
 			achieveText.destroy();
 		}
-		achieveText = new Phaser.Text(game, 0, headerHeight - 30, text, {
-			font: "20px Montserrat",
+		achieveText = new Phaser.Text(game, 0, headerHeight - 25, text, {
+			font: "40px Montserrat",
 	        fill: "#f2cb42",
 	        align: "center"
 		});
@@ -159,8 +212,8 @@ var playerState = (function(){
 
 	function onScrew(data){
 		player.block++;
-		player.points += data;
-		drawAchieveText('YOU BLOCKED ' + data.screw);
+		player.points += data.points;
+		drawAchieveText('YOU BLOCKED ' + data.data.screw);
 		achieveText.alpha = 0;
 		var timeline = new TimelineMax();
 		timeline.to(achieveText, 0.75, { alpha: 1 }, 0);
@@ -168,6 +221,13 @@ var playerState = (function(){
 	}
 
 	// handle gui
+
+	function handlePauseClicked(){
+		drawPause();
+		_.invoke(hand, 'enable', false);
+		// TweenMax.pauseAll();
+		// socket.emit('speed:player:pause');
+	}
 
 	function handleStageReady(){
 		if(config.isTest){
@@ -189,6 +249,7 @@ var playerState = (function(){
 			if(!cardInHand || cardInHand === card || !cardInHand.faceup){
 				return;
 			}
+			cardInHand.reject();
 			if(compareCards(cardInHand.card, card.card)){
 				// card.setOverlapSighted();
 				cardInHand.setOverlapSighted();
@@ -196,6 +257,7 @@ var playerState = (function(){
 			}
 		});
 		// create a beneath card
+		destroyNext();
 		nextCard = drawCard(null, card.index, false, player.game.cardCount <= 5);
 	}
 
@@ -338,10 +400,26 @@ var playerState = (function(){
 		timeline.add(common.tweenStageColor(isReady ? 0x36de4a : winnerColor, function(){
 			socket.emit('speed:player:ready', { isReady: isReady });
 		}, 0.75), 0);
-		timeline.add(btnReady.tweenColor(isReady ? winnerColor : 0x36de4a, 0xffffff), 0);
+		timeline.add(btnReady.tweenColor(isReady ? 0x36de4a : winnerColor, 0xffffff), 0);
 
 		if(config.isTest){
 		}
+	}
+
+	function handleContinueClicked(){
+		pause.destroy();
+	}
+
+	function handleExitClicked(){
+	 	if(!confirm("Are you sure?")){
+	        return;
+	    };
+		_.each(pause.container.children, function(item){
+			if(item.setEnable){
+				item.setEnable(false);
+			}
+		});
+		socket.emit('speed:player:leave', handleLeave);
 	}
 
 	// handling socket
@@ -386,7 +464,9 @@ var playerState = (function(){
 
 	function handleSpeedy(data){
 		console.log('handleSpeedy:', data);
-
+		if(state === 'finish'){
+			return;
+		}
 		setSpeedy();
 		var timeline = new TimelineMax();
 		timeline.add(_.invoke(boards, 'disappear'));
@@ -405,6 +485,9 @@ var playerState = (function(){
 
 	function handleCardOverlap(data) {
 		console.log('handleCardOverlap:', data);
+		if(state === 'finish'){
+			return;
+		}
 		_.invoke(hand, 'enable', true);
 		_.invoke(boards, 'cancelProximity');
 		if(!data.confirm){
@@ -433,9 +516,15 @@ var playerState = (function(){
 
 	function handleCardBoard(data){
 		console.log('handleCardBoard:', data);
+		if(state === 'finish'){
+			return;
+		}
 		_.invoke(boards, 'cancelCard');
 		_.invoke(boards, 'cancelProximity');
 		if(!data.confirm){
+			if(navigator.vibrate){
+				navigator.vibrate(2500);
+			}
 			// reject
 			destroyNext();
 			_.invoke(hand, 'reject')
@@ -464,7 +553,7 @@ var playerState = (function(){
 				screenTimeline = new TimelineMax();
 				screenTimeline.to([achieveText, achieveSymbol], 0.75, { alpha: 1 });
 				screenTimeline.add(common.tweenStageColor(0x730d01, null, 0.75), 0);
-				screenTimeline.addLabel('screwOver', 3);
+				screenTimeline.addLabel('screwOver', 4);
 				screenTimeline.to([achieveText, achieveSymbol], 0.75, { alpha: 0 }, 'screwOver');
 				screenTimeline.add(common.tweenStageColor(0x1E1E1E, 0.75), 'screwOver-=1');
 				timeline.add(screenTimeline, 0);
@@ -502,7 +591,7 @@ var playerState = (function(){
 			screenTimeline = new TimelineMax();
 			screenTimeline.to([achieveText, achieveSymbol], 0.75, { alpha: 1 });
 			screenTimeline.add(common.tweenStageColor(0x710072, null, 0.75), 0);
-			screenTimeline.addLabel('faztOver', 3);
+			screenTimeline.addLabel('faztOver', 4);
 			screenTimeline.to([achieveText, achieveSymbol], 0.75, { alpha: 0 }, 'faztOver');
 			screenTimeline.add(common.tweenStageColor(0x1E1E1E, 0.75), 'faztOver-=1');
 			timeline.add(screenTimeline, 0);
@@ -514,7 +603,6 @@ var playerState = (function(){
 	function handleAchievement(data){
 		console.log('handleAchievement:', data);
 		var achievement = data.achievement;
-		data = data.data;
 		switch(achievement){
 			case 'screw':
 				onScrew(data);
@@ -538,16 +626,21 @@ var playerState = (function(){
 
 	function handleWinner(data){
 		console.log('handleWinner:', data);
+		state = 'finish';
 		var timeline = new TimelineLite({ delay: 1, onComplete: onWinnerComplete });
 		var dissipateTime = 1;
 		player.game.winner = data.winner;
 		player.points += data.points;
+
+		destroyNext();
 		
 		footer.flash(0);	
 		_.invoke(hand, 'reject');
 		_.invoke(hand, 'enable', false);
 		timeline.add(_.invoke(boards, 'disappear'));
 		timeline.to(hand, dissipateTime, { alpha: 0 }, 'dissipate');
+
+		_gaq.push(['_trackEvent', 'speez', 'player', 'end' + gameCount]);
 	}
 
 	function handleNext(data){
@@ -562,26 +655,18 @@ var playerState = (function(){
 		winnerText.anchor.set(0.5);
 		container.addChild(winnerText);
 
+		var sound;
 		var timeline = new TimelineMax();
 		if(player.game.winner){
 			winnerText.text = 'YOU WIN';
 			winnerColor = 0x009bff;
+			sound = 'win/win';
 		} else {
-			winnerText.text = 'GAME OVER';
+			winnerText.text = 'YOU LOSE';
 			winnerColor = 0xcc1801;
+			sound = 'lose/lose';
 		}
-		timeline.add(common.tweenStageColor(winnerColor, null, 0.75), 0);
-		timeline.to(winnerText, 0.75, { alpha: 1 }, 0);
-
-		if(config.isTest){
-			timeline.add(function(){
-				handleNextLobby();
-			}, 2);
-		}
-	}
-
-	function handleNextLobby(data){
-		console.log('handleNextLobby:', data);
+		Audio.instance.play('fx', sound);
 
 		var distance = 70;
 		var pointsText = game.add.text(originalWidthCenter, 320, player.points.toString(), {
@@ -621,6 +706,27 @@ var playerState = (function(){
 		});
 		faztSymbol.anchor.set(0.5);
 
+		var all = [pointsText, line, blockText, blockSymbol, faztText, faztSymbol ];
+		_.each(all, function(item){
+			item.alpha = 0;
+			container.addChild(item);
+		})
+
+		timeline.add(common.tweenStageColor(winnerColor, null, 0.75), 0);
+		timeline.to(winnerText, 0.75, { alpha: 1 }, 0);
+		timeline.addLabel('delay', '+=3');
+		timeline.to(all, 2, { alpha: 1 });
+
+		if(config.isTest){
+			timeline.add(function(){
+				handleNextLobby();
+			}, 2);
+		}
+	}
+
+	function handleNextLobby(data){
+		console.log('handleNextLobby:', data);
+
 		var buttonOptions = {
 	    	color: winnerColor,
 	    	textColor: 0xffffff,
@@ -637,16 +743,11 @@ var playerState = (function(){
 			radius: 10,
 	    }
 		btnReady = new MenuButton(originalWidthCenter, 820, 476, 154, _.extend({ callback: handleReadyClicked, text: "I'M READY" }, buttonOptions));
-
-		var all = [pointsText, line, blockText, blockSymbol, faztText, faztSymbol, btnReady];
-		_.each(all, function(item){
-			item.alpha = 0;
-			container.addChild(item);
-		})
+		btnReady.alpha = 0;
+		container.addChild(btnReady);
 
 		var timeline = new TimelineMax();
-		timeline.to(winnerText, 2, { y: 188, ease: Sine.easeInOut });
-		timeline.fromTo(all, 2, { alpha: 0 }, { alpha: 1 });
+		timeline.to(btnReady, 2, { alpha: 1 });
 	}
 
 	function handleLoad(data){
@@ -690,6 +791,9 @@ var playerState = (function(){
 	}
 
 	function drawCard(card, index, isNew, isEmpty){
+		if(state === 'finish'){
+			return;
+		}
 		var card = new com.speez.components.Card(index, 
 			boardWidth, cardHeight * index + headerHeight, 
 			cardWidth, cardHeight, {
@@ -740,7 +844,7 @@ var playerState = (function(){
 		drawAchieveText(text);
 		achieveText.alpha = 0;
 		timeline.to(achieveText, 0.75, {alpha: 1});
-		timeline.to(achieveText, 0.75, {alpha: 0}, 3);
+		timeline.to(achieveText, 0.75, {alpha: 0}, 4);
 		footer.flash(player.game.cardCount);
 		Audio.instance.play('fx', 'achievement/last' + player.game.cardCount);
 		return timeline;
@@ -778,7 +882,7 @@ var playerState = (function(){
 			}
 			if(boardId === 0){
 				handleCardBoard(_.extend({ confirm: true, newCard: newCard, fazt: _.random(0,1) > 0.5 ? true : false, points: 100 }, returnData));
-				if(true || player.game.cardCount === 0){
+				if(player.game.cardCount === 0){
 					setTimeout(function(){
 						handleWinner({winner: true, points: 1000});
 					}, 10);
@@ -820,9 +924,14 @@ var playerState = (function(){
 		create: function(){
 			common.tweenStageColor(0x1E1E1E, handleStageReady);
 
+			state = 'start';
+			isReady = false;
 			player.points = 0;
 			player.block = 0;
 			player.fazt = 0;
+
+			gameCount++;
+			_gaq.push(['_trackEvent', 'speez', 'player', 'start' + gameCount]);
 
 			socket.on('speed:player:leave', handleLeave);
 			socket.on('speed:player:speedy', handleSpeedy);

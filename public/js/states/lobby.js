@@ -10,6 +10,7 @@ var lobbyState = (function(){
 	var numberText;
 	var numberBox;
 	var playersIcons;
+	var descriptionContainer;
 
 	var textStatus;
 	var textData;
@@ -26,15 +27,17 @@ var lobbyState = (function(){
 		header = new com.speez.components.Header(originalWidth, headerHeight, {
 			alpha: 0,
 		});
-		var headerButton = game.add.text(30, headerHeight * 0.5, '\uf04c', {
-			font: "20px FontAwesome",
-	        fill: "#000000",
-	        align: "center"
-		});
-		headerButton.anchor.set(0.5);
-	    headerButton.inputEnabled = true;
-	    headerButton.events.onInputDown.add(handleStageLeaveClicked);
-		header.addLeft(headerButton);
+		if(config.isPlayer){
+			var headerButton = game.add.text(30, headerHeight * 0.5, '\uf04c', {
+				font: "20px FontAwesome",
+		        fill: "#000000",
+		        align: "center"
+			});
+			headerButton.anchor.set(0.5);
+		    headerButton.inputEnabled = true;
+		    headerButton.events.onInputDown.add(handleStagePauseClicked);
+			header.addLeft(headerButton);
+		}
 
 		// Content
 		lobbyArea = new com.LayoutArea(0, 0, originalWidth, originalHeight, { isDebug: false });
@@ -89,9 +92,115 @@ var lobbyState = (function(){
 		});
 		downContainer.addChild(blockNumber);
 
+		drawDescription();
+
+		toggleDescription(playersIcons.length === 1).progress(1);
+
 		// common
 		common.addLogo('logo', lobbyArea);
 		common.addLogo('beta', lobbyArea);
+	}
+
+	function drawDescription(){
+		// lobby description
+		descriptionContainer = game.add.sprite(originalWidthCenter, originalHeightCenter);
+		container.addChild(descriptionContainer);
+
+		var description = game.add.sprite(-150, 0,'lobbyDescription');
+		description.anchor.set(0.5);
+		description.scale.set(0.9);
+		descriptionContainer.addChild(description);
+
+		var textY = -100;
+		var descriptionText = game.add.text(120, textY, 'JOIN THE GAME\nON YOUR SMARTPHONE', {
+			font: '20px Montserrat',
+			fill: 0x000000,
+			align: 'center',
+		});
+		var descriptionTextBold = game.add.text(120, textY + descriptionText.height, 'AND ENTER THIS NUMBER', {
+			font: 'bold 20px Montserrat',
+			fill: 0x000000,
+			align: 'center',
+		});
+		descriptionText.anchor.set(0.5, 0);
+		descriptionTextBold.anchor.set(0.5, 0);
+		descriptionContainer.addChild(descriptionText);
+		descriptionContainer.addChild(descriptionTextBold);
+		// block number
+		var descriptionBlockNumber = new com.speez.components.BlockNumber(descriptionText.x - 210 / 2, 0, 210, 60, stage.id, {
+			format: {
+				font: "52px Montserrat",
+		        fill: "#ffffff",
+		        align: "center"
+			},
+			margin: 10,
+		});
+		descriptionContainer.addChild(descriptionBlockNumber);
+
+		var descriptionNumberText = game.add.text(descriptionText.x, 80, 'GAME NUMBER', {
+			font: '20px Montserrat',
+			fill: 0x000000,
+			align: 'center',
+		});
+		descriptionNumberText.anchor.set(0.5);
+		descriptionContainer.addChild(descriptionNumberText);
+	}
+
+	function drawPause(){
+		var text = game.add.text(originalWidthCenter, 143, 'PAUZE', {
+			font: "bold 50px FontAwesome",
+	        fill: "#ffffff",
+	        align: "center"
+		});
+	    text.anchor.set(0.5);
+
+		btnContinue = new MenuButton(originalWidthCenter, 313, 324, 96, {
+	    	color: 0x009bff,
+	    	textColor: 0x1e1e1e,
+	    	colorOver: 0xffffff,
+	    	textColorOver: 0x000000,
+			format: {
+		        font: "bold 30px Montserrat",
+		        fill: "#ffffff",
+		        align: "center"
+		    },
+			borderWidth: 5,
+			borderColor: 0xffffff,
+			radius: 5,
+			text: 'CONTINUE',
+			callback: handleContinueClicked,
+	    });
+
+	    btnExit = new MenuButton(originalWidthCenter, 453, 324, 85, {
+	    	color: 0x1e1e1e,
+	    	textColor: 0xffffff,
+	    	colorOver: 0xffffff,
+	    	textColorOver: 0x000000,
+			format: {
+		        font: "bold 30px Montserrat",
+		        fill: "#ffffff",
+		        align: "center"
+		    },
+			borderWidth: 5,
+			borderColor: 0xffffff,
+			radius: 5,
+			text: 'END GAME',
+			callback: handleExitClicked,
+	    });
+
+		pause = new com.speez.components.PauseScreen(originalWidth, originalHeight);
+		game.add.existing(pause);
+	    pause.container.addChild(text);
+		pause.container.addChild(btnExit);
+		pause.container.addChild(btnContinue);
+	}
+
+	function toggleDescription(on){
+		var timeline = new TimelineMax();
+		var alpha = on ? 0 : 1;
+		timeline.to(descriptionContainer, 1, { alpha: on ? 1 : 0 });
+		timeline.to([iconsGroup, blockNumber, numberText], 1, { alpha: on ? 0 : 1 }, 0);
+		return timeline;
 	}
 
 	// Various
@@ -143,7 +252,23 @@ var lobbyState = (function(){
 		btnBoardsCount.text.setText( 'Boards Count: ' + stage.game.boardCount);
 	}
 
-	function handleStageLeaveClicked() {
+	function handleStagePauseClicked() {
+		drawPause();
+	}
+
+	function handleContinueClicked(){
+		pause.destroy();
+	}
+
+	function handleExitClicked(){
+	 	if(!confirm("Are you sure?")){
+	        return;
+	    };
+		_.each(pause.container.children, function(item){
+			if(item.setEnable){
+				item.setEnable(false);
+			}
+		});
 		socket.emit('speed:stage:stageLeave', handleStageLeave);
 	}
 
@@ -171,7 +296,10 @@ var lobbyState = (function(){
 		player.icon = getAvailableIcon();
 
 		timeline = playersIcons[player.icon].setPlayer(player, true);
-		if(playersIcons.length < 4){
+		if(playersIcons.length === 1) {
+			toggleDescription(false);
+		}  
+		if(playersIcons.length < 4) {
 			playersIcons.push(createNewIcon());
 			timeline.add(rearrangeIcons());
 		}
@@ -193,7 +321,9 @@ var lobbyState = (function(){
 		var timeline = icon.removePlayer();
 		timeline.add(icon.removePopup(), 0);
 
-		if(playersIcons[playersIcons.length - 1].player){
+		if(playersIcons.length === 1){
+			timeline.add(toggleDescription(true));
+		} else if(playersIcons[playersIcons.length - 1].player){
 			playersIcons.push(createNewIcon());
 		}
 		timeline.add(rearrangeIcons());

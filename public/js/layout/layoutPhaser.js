@@ -126,6 +126,7 @@
 		if(!found) {
 			return;
 		}
+
 		item.obj.x = item.data.x;
 		item.obj.y = item.data.y;
 		if(item.obj.parent !== game.world){
@@ -146,7 +147,7 @@
 		if(item.state === Layout.STATE_UPDATE){
 			this.isUpdate = 0;
 		} else {
-			this.isUpdate = 0
+			this.isUpdate = 0;
 		}
 		this.changesArray.push(_.extend(item, { data: data }));
 	}

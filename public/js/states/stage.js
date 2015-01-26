@@ -16,13 +16,37 @@ var stageState;
 	var notification;
 	var rain;
 
+	// pause
+	var pause;
+	var btnContinue;
+	var btnExit;
+
 	// groups
 	var playersIconsGroup;
+
+	// header
+	var header;
+	var headerButton;
 
 	// timeline
 	var timelineEnd;
 
 	function drawGui(){
+		// header
+		var headerHeight = 70;
+		header = new com.speez.components.Header(originalWidth, headerHeight, {
+			alpha: 0,
+		});
+		var headerButton = game.add.text(30, headerHeight * 0.5, '\uf04c', {
+			font: "20px FontAwesome",
+	        fill: "#ffffff",
+	        align: "center"
+		});
+		headerButton.anchor.set(0.5);
+	    headerButton.inputEnabled = true;
+	    headerButton.events.onInputDown.add(drawPause);
+		header.addLeft(headerButton);
+
 		game.stage.backgroundColor = 0x1e1e1e;
 
 		// Content
@@ -127,6 +151,55 @@ var stageState;
 		});
 	}
 
+	function drawPause(){
+		var text = game.add.text(originalWidthCenter, 143, 'PAUZE', {
+			font: "bold 50px FontAwesome",
+	        fill: "#ffffff",
+	        align: "center"
+		});
+	    text.anchor.set(0.5);
+
+		btnContinue = new MenuButton(originalWidthCenter, 313, 324, 96, {
+	    	color: 0x009bff,
+	    	textColor: 0x1e1e1e,
+	    	colorOver: 0xffffff,
+	    	textColorOver: 0x000000,
+			format: {
+		        font: "bold 30px Montserrat",
+		        fill: "#ffffff",
+		        align: "center"
+		    },
+			borderWidth: 5,
+			borderColor: 0xffffff,
+			radius: 5,
+			text: 'CONTINUE',
+			callback: handleContinueClicked,
+	    });
+
+	    btnExit = new MenuButton(originalWidthCenter, 453, 324, 85, {
+	    	color: 0x1e1e1e,
+	    	textColor: 0xffffff,
+	    	colorOver: 0xffffff,
+	    	textColorOver: 0x000000,
+			format: {
+		        font: "bold 30px Montserrat",
+		        fill: "#ffffff",
+		        align: "center"
+		    },
+			borderWidth: 5,
+			borderColor: 0xffffff,
+			radius: 5,
+			text: 'END GAME',
+			callback: handleExitClicked,
+	    });
+
+		pause = new com.speez.components.PauseScreen(originalWidth, originalHeight);
+		game.add.existing(pause);
+	    pause.container.addChild(text);
+		pause.container.addChild(btnExit);
+		pause.container.addChild(btnContinue);
+	}
+
 	function destroyBoards(){
 		if(!boards){
 			return;
@@ -155,7 +228,29 @@ var stageState;
 		socket.emit('speed:stage:next');
 	}
 
+	function handleContinueClicked(){
+		pause.destroy();
+	}
+
+	function handleExitClicked(){
+	 	if(!confirm("Are you sure?")){
+	        return;
+	    };
+		_.each(pause.container.children, function(item){
+			if(item.setEnable){
+				item.setEnable(false);
+			}
+		});
+		socket.emit('speed:stage:stageLeave', handleStageLeave);
+	}
+
 	// handling socket
+
+	function handleStageLeave(){
+		delete stage;
+		stage = null;
+		game.state.start('main');
+	}
 
 	function handleStart(){
 		var texts = [
@@ -361,7 +456,7 @@ var stageState;
 
 	function handleScrew(player, data){
 		player.currentBlock++;
-		var screwPlayer = stage.players[data.screwPlayerId];
+		var screwPlayer = stage.players[data.data.screwId];
 		var icon = playersIcons[screwPlayer.icon];
 		icon.showIcon({
 			symbol: '\uf05e',
@@ -422,57 +517,7 @@ var stageState;
 		// timeline.add(onWinnerComplete, '+=' + 2);
 		
 		var icon;
-		
-		// best blocker
-		if(stage.game.winnerData.bestBlocker){
-			var bestBlocker = stage.players[stage.game.winnerData.bestBlocker];
-			icon = playersIcons[bestBlocker.icon];
-			bestBlocker.points += stage.game.winnerData.bestBlockerPoints;
-			var blockerTexts = [
-				{ text: 'BEST', color: 0xffffff },
-				{ text: 'BLOCKER', color: 0xffffff },
-				{ text: bestBlocker.name, color: 0xcb1800 },
-			]
-			timeline.addLabel('bestBlocker', '+=2');
-			timeline.add(notification.show(blockerTexts, '\uf05e', bestBlocker.currentBlock, {
-				symbolColor: 0xffffff,
-				delayTime: 3,
-			}), 'bestBlocker');
-			timeline.add(icon.popup({
-				color: 0xcb1800,
-				text: stage.game.winnerData.bestBlockerPoints.toString(),
-				symbol: '\uf05e',
-				isStay: false,
-				stayTime: 1,
-			}), 'bestBlocker');
-			timeline.add(icon.setPoints(player.points), 'bestBlocker');
-			timeline.add(icon.tweenColor({color: 0xcb1800, isReturn: true, returnTime: 3}), 'bestBlocker');
-		}
-		// best fazt
-		if(stage.game.winnerData.bestFazt){
-			var bestFazt = stage.players[stage.game.winnerData.bestFazt];
-			icon = playersIcons[bestFazt.icon];
-			bestFazt.points += stage.game.winnerData.bestFaztPoints;
-			var faztTexts = [
-				{ text: 'FAZT', color: 0xffffff },
-				{ text: 'ONE', color: 0xffffff },
-				{ text: bestFazt.name, color: 0xb600db },
-			]
-			timeline.addLabel('bestFazt', '+=2');
-			timeline.add(notification.show(faztTexts, '\uf0e7', bestFazt.currentFazt, {
-				symbolColor: 0xffffff,
-				delayTime: 3,
-			}), 'bestFazt');
-			timeline.add(icon.popup({
-				color: 0xb600db,
-				text: stage.game.winnerData.bestFaztPoints.toString(),
-				symbol: '\uf0e7',
-				isStay: false,
-				stayTime: 1,
-			}), 'bestFazt');
-			timeline.add(icon.setPoints(player.points), 'bestFazt');
-			timeline.add(icon.tweenColor({color: 0xb600db, isReturn: true, returnTime: 3}), 'bestFazt');
-		}
+
 		// points
 		var texts = [ 
 			{ text: 'THE', color: 0xffffff },
@@ -498,8 +543,59 @@ var stageState;
 		}), 'points');
 		timeline.add(icon.setPoints(player.points), 'points');
 		timeline.add(icon.tweenColor({color: 0x009bff, isReturn: true, returnTime: 5}), 'points');
+		
+		// best blocker
+		if(stage.game.winnerData.bestBlocker){
+			var bestBlocker = stage.players[stage.game.winnerData.bestBlocker];
+			icon = playersIcons[bestBlocker.icon];
+			bestBlocker.points += stage.game.winnerData.bestBlockerPoints;
+			var blockerTexts = [
+				{ text: 'BEST', color: 0xffffff },
+				{ text: 'BLOCKER', color: 0xffffff },
+				{ text: bestBlocker.name, color: 0xcb1800 },
+			]
+			timeline.addLabel('bestBlocker', '+=2');
+			timeline.add(notification.show(blockerTexts, '\uf05e', bestBlocker.currentBlock, {
+				symbolColor: 0xffffff,
+				delayTime: 3,
+			}), 'bestBlocker');
+			timeline.add(icon.popup({
+				color: 0xcb1800,
+				text: stage.game.winnerData.bestBlockerPoints.toString(),
+				symbol: '\uf05e',
+				isStay: false,
+				stayTime: 1,
+			}), 'bestBlocker');
+			timeline.add(icon.setPoints(bestBlocker.points), 'bestBlocker');
+			timeline.add(icon.tweenColor({color: 0xcb1800, isReturn: true, returnTime: 3}), 'bestBlocker');
+		}
+		// best fazt
+		if(stage.game.winnerData.bestFazt){
+			var bestFazt = stage.players[stage.game.winnerData.bestFazt];
+			icon = playersIcons[bestFazt.icon];
+			bestFazt.points += stage.game.winnerData.bestFaztPoints;
+			var faztTexts = [
+				{ text: 'FAZT', color: 0xffffff },
+				{ text: 'ONE', color: 0xffffff },
+				{ text: bestFazt.name, color: 0xb600db },
+			]
+			timeline.addLabel('bestFazt', '+=2');
+			timeline.add(notification.show(faztTexts, '\uf0e7', bestFazt.currentFazt, {
+				symbolColor: 0xffffff,
+				delayTime: 3,
+			}), 'bestFazt');
+			timeline.add(icon.popup({
+				color: 0xb600db,
+				text: stage.game.winnerData.bestFaztPoints.toString(),
+				symbol: '\uf0e7',
+				isStay: false,
+				stayTime: 1,
+			}), 'bestFazt');
+			timeline.add(icon.setPoints(bestFazt.points), 'bestFazt');
+			timeline.add(icon.tweenColor({color: 0xb600db, isReturn: true, returnTime: 3}), 'bestFazt');
+		}
 
-
+		_gaq.push(['_trackEvent', 'speez', 'stage', 'end' + gameCount]);
 	}
 
 	function handleNext(data){
@@ -661,6 +757,9 @@ var stageState;
 				handleStart();
 				return;
 			}
+
+			gameCount++;
+			_gaq.push(['_trackEvent', 'speez', 'stage', 'start' + gameCount]);
 
 			initPlayers();
 			drawGui();

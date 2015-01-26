@@ -96,8 +96,8 @@ com.speez.components.TimerLines = (function(){
 
 	function createCounting(){
 		var timeline = new TimelineMax({ onComplete: countComplete, onCompleteScope: this });
-		timeline.to(this.leftLine.graphicsData[0].points, this.options.time, { '1': this.options.height, ease: Linear.easeNone }, 0);
-		timeline.to(this.rightLine.graphicsData[0].points, this.options.time, { '1': this.options.height, ease: Linear.easeNone }, 0);
+		timeline.to(this.leftLine.graphicsData[0].shape, this.options.time, { height: this.options.height, ease: Linear.easeNone }, 0);
+		timeline.to(this.rightLine.graphicsData[0].shape, this.options.time, { height: this.options.height, ease: Linear.easeNone }, 0);
 		return timeline;
 	}
 

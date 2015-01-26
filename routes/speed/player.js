@@ -31,7 +31,7 @@ module.exports.join = function(req, stage) {
 	player.avatar = join.name;
 	var playerData = _.pick(player, ['id', 'name', 'points', 'block', 'fazt', 'avatar']);
 	console.log(playerData);
-	stage.socket.emit('speed:stage:join', playerData);
+	stage.send('speed:stage:join', playerData);
 	req.io.respond(_.extend({ confirm: true, stageId: stage.id }, playerData));
 	return player;
 }
@@ -39,7 +39,7 @@ module.exports.join = function(req, stage) {
 module.exports.disconnect = function(socket){
 	var stage = socket.player.stage;
 	stage.leave(socket.player);
-	stage.socket.emit('speed:stage:leave', {
+	stage.send('speed:stage:leave', {
 		id: socket.player.id,
 		code: Stage.LEAVE_DISCONNECT,
 		reason: 'player disconnected',
@@ -55,19 +55,19 @@ module.exports.messages = {
 		} else {
 			req.player.name = req.stage.getName(req.player.name);
 		}
-		req.stage.socket.emit('speed:stage:name', { playerId: req.player.id, name: req.player.name });
+		req.stage.send('speed:stage:name', { playerId: req.player.id, name: req.player.name });
 		req.io.respond({name: req.player.name});
 	},
 
 	avatar: function(req){
 		req.player.avatar = req.data.avatar;
-		req.stage.socket.emit('speed:stage:avatar', { playerId: req.player.id, avatar: req.player.avatar });
+		req.stage.send('speed:stage:avatar', { playerId: req.player.id, avatar: req.player.avatar });
 		req.io.respond({ avatar: req.player.avatar });
 	},
 
 	leave: function(req){
 		req.stage.leave(req.player);
-		req.stage.socket.emit('speed:stage:leave', {
+		req.stage.send('speed:stage:leave', {
 			id: req.player.id,
 			code: Stage.LEAVE_USER_CHOICE,
 			reason: 'player left',
@@ -80,7 +80,7 @@ module.exports.messages = {
 
 	ready: function(req){
 		var isAllReady = req.stage.setReady(req.player, req.data.isReady);
-		req.stage.socket.emit('speed:stage:ready', {
+		req.stage.send('speed:stage:ready', {
 			id: req.player.id,
 			isReady: req.data.isReady,
 		});
@@ -103,12 +103,12 @@ module.exports.messages = {
 			player.setConfig(options);
 			var playerData = _.pick(player, [ 'cardCount', 'boardCount', 'hand' ]);
 			playerData.boards = playerBoards;
-			player.socket.emit('speed:player:load', playerData);
+			player.send('speed:player:load', playerData);
 		})
 
 		// Getting stage load data
 		var stageData = _.pick(req.stage,  [ 'cardCount', 'boardCount' ]);
-		req.stage.socket.emit('speed:stage:load', stageData);
+		req.stage.send('speed:stage:load', stageData);
 	},
 
 	loaded: function(req){
@@ -117,7 +117,7 @@ module.exports.messages = {
 		}
 		req.stage.startGame();
 		req.stage.broadcast('speed:player:start');
-		req.stage.socket.emit('speed:stage:start');
+		req.stage.send('speed:stage:start');
 	},
 
 	cardBoard: function(req){
@@ -128,7 +128,7 @@ module.exports.messages = {
 			return;
 		}
 		req.io.respond(data);
-		req.stage.socket.emit('speed:stage:cardBoard', { 
+		req.stage.send('speed:stage:cardBoard', { 
 			boardId: req.data.boardId, 
 			card: data.card, 
 			playerId: req.player.id, 
@@ -149,26 +149,26 @@ module.exports.messages = {
 				}
 				if(player.id === winResponse.winner){
 					points += winResponse.points;
-					player.socket.emit('speed:player:winner', { winner: true, points: points });
+					player.send('speed:player:winner', { winner: true, points: points });
 				} else {
-					player.socket.emit('speed:player:winner', { winner: false, points: points });
+					player.send('speed:player:winner', { winner: false, points: points });
 				}
 			});
-			req.stage.socket.emit('speed:stage:winner', winResponse);
+			req.stage.send('speed:stage:winner', winResponse);
 			return;
 		}
 		if(!req.stage.isAnyMoveExist()){
-			req.stage.socket.emit('speed:stage:noMoves');
+			req.stage.send('speed:stage:noMoves');
 		}
 	},
 
 	cardOverlap: function(req) {
 		var data = req.player.playOverlap(req.data.handId, req.data.overlapId);
 		data = _.extend(data, { handId: req.data.handId, overlapId: req.data.overlapId })
-		req.stage.socket.emit('speed:stage:cardOverlap', { playerId: req.player.id, points: data.points, cardCount: req.player.cardCount });
+		req.stage.send('speed:stage:cardOverlap', { playerId: req.player.id, points: data.points, cardCount: req.player.cardCount });
 		req.io.respond(data);
 		if(!req.stage.isAnyMoveExist()){
-			req.stage.socket.emit('speed:stage:noMoves');
+			req.stage.send('speed:stage:noMoves');
 		}
 	},
 
@@ -177,6 +177,6 @@ module.exports.messages = {
 			return;
 		}
 		req.stage.broadcast('speed:player:next');
-		req.stage.socket.emit('speed:stage:next');
+		req.stage.send('speed:stage:next');
 	},
 };
