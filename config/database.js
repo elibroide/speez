@@ -1,11 +1,13 @@
 // database.js
 
 module.exports = function(app, mongoose){
-	var address;
-	address = 'mongodb://elibroide:locklegion@ds063769.mongolab.com:63769/iwmmtg';
-	// address = 'mongodb://localhost/iwmmtg';
-	mongoose.connect(address);
-	if(app.env === 'development'){
-
+	var settings = {
+		header: 'DB Settings',
+		address: 'mongodb://broidebrothers:Bb6732202@ds039431.mongolab.com:39431/speez',
 	}
+	if(app.get('env') === 'development'){
+		settings.address = 'mongodb://localhost:27017/speez'
+	}
+	console.log(settings)
+	mongoose.connect(settings.address);
 };

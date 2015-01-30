@@ -162,20 +162,18 @@ var avatarNames = [
 
 function init(){
 
-
     // set config
     config = {
         dpr: window.devicePixelRatio,
         width: 640,
         height: 960,
         isLocal: true,
+        platform: platformType,
+        isPlayer: platformType === 'player' || platformType === 'mobile',
+        isPackage: window.location.protocol.indexOf('file') > -1,
+        version: gameVersion,
+        isUnderConstruction: isUnderConstruction && window.location.hash.indexOf('user=bb') === -1 && window.location.protocol.indexOf('file') === -1,
     }
-
-    // Identify FireTV
-    config.isFireTV = window.location.hash.toLowerCase().indexOf('type=firetv') !== -1;
-
-    config.isPlayer = window.location.hash.toLowerCase().indexOf('type=player') !== -1 ||
-        (detector.mobile() && !config.isFireTV);
 
     // set size
     originalWidth = config.width;
@@ -184,7 +182,7 @@ function init(){
     originalHeightCenter = originalHeight * 0.5;
 
     // set address
-    if(window.location.protocol.indexOf('file') === 0){
+    if(config.isPackage){
         config.address = 'http://speez.herokuapp.com/';
         config.isPackage = true;
     } else {
@@ -197,9 +195,7 @@ function init(){
 
     // initiate singletones
     var audio = new Audio();
-
     game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.CANVAS, '');
-
     game.stageColor = function(color){
         if(color !== undefined){
             game.stage.backgroundColor = common.getRgb(color);
@@ -207,39 +203,25 @@ function init(){
         return game.stage.backgroundColor;
     }
 
-    game.state.add('boot', bootState);
-    game.state.add('preload', preloadState);
-    game.state.add('main', mainState);
-    game.state.add('player', playerState);
-    game.state.add('playerFinish', playerFinishState);
-    game.state.add('lobby', lobbyState);
-    game.state.add('lobbyPlayer', lobbyPlayerState);
-    game.state.add('stage', stageState);
-    game.state.add('stageFinish', stageFinishState);
-
+    // debug config
     console.log(config);
+
+    // load game states
+    game.state.add('boot', bootState);
+    if(config.isUnderConstruction){
+        game.state.add('mail', mailState);
+    } else {
+        game.state.add('preload', preloadState);
+        game.state.add('main', mainState);
+        game.state.add('player', playerState);
+        game.state.add('playerFinish', playerFinishState);
+        game.state.add('lobby', lobbyState);
+        game.state.add('lobbyPlayer', lobbyPlayerState);
+        game.state.add('stage', stageState);
+        game.state.add('stageFinish', stageFinishState);
+    }
     game.state.start('boot');
-
 }
-// window.addEventListener('load', initGame);
-
-// Listen for orientation changes
-window.addEventListener("orientationchange", function() {
-    // Announce the new orientation number
-    
-}, false);
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -253,7 +235,7 @@ var common = {
 		if(gameOrientation === targetOrientation){
 			return;
 		}
-		if(detector.mobile() && !config.isFireTV){
+		if(config.platform === 'mobile'){
 			screen.lockOrientation(targetOrientation);
 		}
 		console.log('Flipping ' + gameOrientation + ' to ' + targetOrientation);
@@ -576,7 +558,7 @@ var common = {
 					common.open('https://www.facebook.com/Speez.co');
 				});
 				facebook.anchor.set(0, 1);
-				var text = game.add.text(25, originalHeight - facebook.height, 'Feedback', {
+				var text = game.add.text(25, originalHeight - facebook.height, 'Feedback - ' + config.platform, {
 					font: '25px FontAwesome',
 					fill: '#000000',
 					align: 'center',
@@ -3496,9 +3478,9 @@ com.speez.components.StageBoard = (function(){
 	}
 
 	function onSetCardPartComplete(oldCard){
-		if(oldCard){
-			oldCard.destroy();
-		}
+		// if(oldCard){
+		// 	oldCard.destroy();
+		// }
 	}
 
 	function onSetCardComplete(incomingEffect){
@@ -3539,12 +3521,12 @@ com.speez.components.StageBoard = (function(){
 			return;
 		}
 
-		var incomingEffect = new com.speez.components.IncomingEffect(_.extend({
-			color: this.options.color,
-			name: 'board' + this.options.color.toString(16),
-			blurColor: common.addHsl(this.options.color, 0.1),
-		}, this.effectOptions));
-		this.addChildAt(incomingEffect, 0);
+		// var incomingEffect = new com.speez.components.IncomingEffect(_.extend({
+		// 	color: this.options.color,
+		// 	name: 'board' + this.options.color.toString(16),
+		// 	blurColor: common.addHsl(this.options.color, 0.1),
+		// }, this.effectOptions));
+		// this.addChildAt(incomingEffect, 0);
 
 		var currentCard = parseInt(oldCard.text);
 		var newCard = parseInt(card)
@@ -3555,12 +3537,12 @@ com.speez.components.StageBoard = (function(){
 		var targetY = this.options.radius + this.text.height;
 		this.text.y = targetY * direction;
 
-		var timeline = new TimelineLite({ onComplete: onSetCardComplete, onCompleteScope: this, onCompleteParams: [incomingEffect] });
+		var timeline = new TimelineLite({ onComplete: onSetCardComplete, onCompleteScope: this, onCompleteParams: [] });
 		timeline.to(oldCard, this.options.setCardTime, { onComplete: onSetCardPartComplete, onCompleteScope: this, onCompleteParams: [oldCard], y: -targetY * direction, ease: Linear.noEase }, 0);
 		timeline.to(this.text, this.options.setCardTime, { y: 0, ease: Linear.noEase }, 0);
 
 		timeline.to(this.background, this.options.setCardTime, { alpha: 1, ease: Sine.easeOut }, 0);
-		timeline.add(incomingEffect.animate(this.animationOptions), this.options.setCardTime + '-=' + 0.5);
+		// timeline.add(incomingEffect.animate(this.animationOptions), this.options.setCardTime + '-=' + 0.5);
 		timeline.to(this.background, this.options.setCardTime, { alpha: this.options.backgroundAlpha, ease: Sine.easeIn }, this.options.setCardTime);
 
 		timeline.to(this.circleScales, this.options.setCardTime, { x: 1.4, y: 1.4, ease: Sine.easeOut }, 0);
@@ -4795,11 +4777,13 @@ var Network = (function(){
 
 	function onConnect(){
 		// game.state.load('menu');
+		console.log('Connected');
 	}
 
-	function onDisconnect(){
+	function onDisconnect(data){
 		player = null;
 		stage = null;
+		console.log('Disconnected');
 		game.state.start('main');
 	}
 
@@ -4829,7 +4813,7 @@ var bootState = (function(){
 
 	function setSocket(){
 		//// Local
-		console.log('Trying to connect to ' + config.address)
+		console.log('Trying to connect to ' + config.address);
 
 		network = new Network();
 	}
@@ -4879,11 +4863,13 @@ var bootState = (function(){
 
 		create: function(){
     		game.stage.disableVisibilityChange = true;
-			setSocket();
-
 			setScale();
-
-  			game.state.start('preload');
+			if(!config.isUnderConstruction){
+				setSocket();
+  				game.state.start('preload');
+			} else {
+				game.state.start('mail');
+			}
 		},
 
 		render: function(){
@@ -5634,7 +5620,333 @@ var lobbyPlayerState = (function(){
 
 	}
 
-})();;// main.js
+})();;// test.js
+var mailState = (function(){
+
+	function state(){
+
+	}
+
+	state.prototype.preload = function() {
+		common.flipOrientation('portrait');
+
+		layout = new Layout({
+			game: game,
+        	width: originalWidth,
+        	height: originalHeight,
+        	isDebug: false,
+		});
+
+		for (var i = 0; i < avatarNames.length; i++) {
+			var number = common.addZeroes(i+1, 2);
+			game.load.image(avatarNames[i] + '_head', 'images/avatar_' + number + '_head.png');
+		};
+	};
+
+	state.prototype.create = function() {
+		// Draw things
+		this.drawGui();
+  		Layout.instance.resize(game.width, game.height);
+	};
+
+	state.prototype.drawGui = function() {
+		
+		// set container
+		this.container = game.add.sprite();
+		this.area = new com.LayoutArea(0, 0, originalWidth, originalHeight);
+		this.area.attach(this.container, {width: originalWidth, height: originalHeight, onResize: onAreaResized.bind(this) });
+		game.stage.backgroundColor = 0xe2e2e2;
+
+		this.updateText = game.add.text(originalWidthCenter, originalHeightCenter);
+		this.updateText.anchor.set(0.5);
+		this.container.addChild(this.updateText);
+
+		this.logo = game.add.sprite(originalWidthCenter, 125, 'logo');
+		this.logo.anchor.set(0.5);
+		this.container.addChild(this.logo);
+
+		this.logoO = game.add.sprite(originalWidthCenter, 310, 'logoO');
+		this.logoO.anchor.set(0.5);
+		this.container.addChild(this.logoO);
+
+		this.avatarContainer = game.add.sprite(originalWidthCenter, 250);
+		this.avatarContainer.alpha = 0;
+		this.avatarContainer.timeline = new TimelineMax({ repeat: -1, yoyo: true });
+		this.avatarContainer.timeline.to(this.avatarContainer, 1, { y: '-=20', ease: Power2.easeInOut });
+		this.avatarAnimation();
+		this.container.addChild(this.avatarContainer);
+
+		this.notificationContainer = game.add.sprite(originalWidthCenter, originalHeightCenter);
+		this.container.addChild(this.notificationContainer);
+
+		this.textNotification = game.add.text(0, -45, 'COMING SOON', {
+			font: "27px Montserrat",
+	        fill: "#000000",
+	        align: "center"
+		});
+		this.textNotification.anchor.set(0.5);
+		this.notificationContainer.addChild(this.textNotification);
+
+		this.textAssurance = game.add.text(0, 165, '* We won\'t share your address', {
+			font: "22px Montserrat",
+	        fill: "#000000",
+	        align: "center"
+		});
+		this.textAssurance.anchor.set(0.5);
+		this.notificationContainer.addChild(this.textAssurance);
+
+		this.footer = game.add.sprite(originalWidthCenter, originalHeight - 200);
+		this.container.addChild(this.footer);
+
+		this.btnVideo = new MenuButton(-100, 0, 170, 100, {
+	    	color: 0xA3A3A3,
+	    	textColor: 0x000000,
+	    	colorOver: 0xffffff,
+	    	textColorOver: 0x000000,
+			format: {
+		        font: "bold 60px FontAwesome",
+		        fill: "#ffffff",
+		        align: "center"
+		    },
+			borderWidth: 5,
+			borderColor: 0x000000,
+			radius: 30,
+			text: '\uf04b',
+			callback: handleVideoClicked.bind(this),
+	    });
+	    this.footer.addChild(this.btnVideo);
+
+	    this.textVideo = game.add.text(this.btnVideo.x, this.btnVideo.y + 80, 'GAME VIDEO', {
+			font: "22px Montserrat",
+	        fill: "#000000",
+	        align: "center"
+		});
+		this.textVideo.anchor.set(0.5);
+		this.footer.addChild(this.textVideo);
+
+		this.btnFacebook = new MenuButton(130, 0, 100, 100, {
+	    	color: 0xA3A3A3,
+	    	textColor: 0x000000,
+	    	colorOver: 0xffffff,
+	    	textColorOver: 0x000000,
+			format: {
+		        font: "bold 60px FontAwesome",
+		        fill: "#ffffff",
+		        align: "center"
+		    },
+			borderWidth: 5,
+			borderColor: 0x000000,
+			radius: 30,
+			text: '\uf09a',
+			callback: handleFacebookClicked.bind(this),
+	    });
+	    this.footer.addChild(this.btnFacebook);
+
+	    this.textFacebook = game.add.text(this.btnFacebook.x, this.btnFacebook.y + 80, 'FACEBOOK', {
+			font: "22px Montserrat",
+	        fill: "#000000",
+	        align: "center"
+		});
+		this.textFacebook.anchor.set(0.5);
+		this.footer.addChild(this.textFacebook);
+
+		common.addLogo('logo', this.area);
+
+		// input
+		this.emailPlaceholderText = "SIGN UP FOR UPDATE";
+		this.emailPlaceholderFocusText = "ENTER EMAIL ADDRESS";
+    	$('<form>')
+    		.submit(function(event){
+    			event.preventDefault();
+    		})
+    		.appendTo('body');
+		$('<style>')
+    		.appendTo('form');
+		if(detector.os() && detector.os().toLowerCase().indexOf('android') === -1){
+			$('<button type="submit">')
+				.css({
+					position: 'absolute',
+					margin: -1000,
+				})
+				.click(function(event){
+					event.preventDefault();
+				})
+				.appendTo('form');
+		}
+    	this.tbxMail = $('<input id="tbxMail" type="email">')
+    		.appendTo('form')
+    		.addClass('tbxMail')
+    		.css({
+				position: 'absolute',
+				'background-color': common.toRgb(_.sample(palette)),
+				'text-align': 'center',
+				'font-family': 'Montserrat, FontAwesome',
+				'font-weight': 'bold',
+    		})
+    		.attr('placeholder', this.emailPlaceholderText)
+    		.focusout(onJoinTextFocusOut.bind(this))
+    		.focusin(onJoinTextFocusIn.bind(this))
+    		.keydown(onJoinTextKeyDown.bind(this))
+    		.keyup(onJoinTextChange.bind(this))
+    		.change(onJoinTextChange.bind(this));
+	};
+
+	state.prototype.avatarAnimation = function() {
+		if(this.avatarContainer.showTimeline){
+			this.avatarContainer.avatar.destroy();
+			delete this.avatarContainer.avatar;
+			this.avatarContainer.showTimeline.kill();
+			delete this.avatarContainer.showTimeline;
+		}
+		var timeline = new TimelineMax({onComplete: this.avatarAnimation, onCompleteScope: this});
+		this.avatarContainer.showTimeline = timeline;
+
+		var avatar = game.add.sprite(0, 0, _.sample(avatarNames) + '_head');
+		avatar.anchor.set(0.5);
+		this.avatarContainer.avatar = avatar;
+		this.avatarContainer.addChild(avatar);
+		timeline.to(this.avatarContainer, 1, { alpha: 1, ease: Elastic.easeOut });
+		timeline.to(this.avatarContainer, 1, { alpha: 0, ease: Elastic.easeOut }, '+=3');
+	};
+
+	state.prototype.hideMail = function() {
+		this.tbxMail.hide().val('');
+		this.notificationContainer.kill();
+	};
+
+	state.prototype.showMail = function() {
+		this.tbxMail.show();
+		this.notificationContainer.revive();
+	};
+
+	state.prototype.showThinking = function() {
+		this.thinkingText = game.add.text(originalWidthCenter, originalHeightCenter, 'Sending your information!', {
+			font: "bold 55px Montserrat",
+	        fill: "#000000",
+	        align: "center"
+		});
+		this.thinkingText.anchor.set(0.5);
+		this.container.addChild(this.thinkingText);
+	};
+
+	state.prototype.hideThinking = function() {
+		if(this.thinkingText){
+			this.thinkingText.destroy();
+			delete this.thinkingText;
+		}
+	};
+
+	// private methods
+
+	function handleVideoClicked(){
+		common.open('https://www.youtube.com/watch?v=meak65zqfGE');
+	}
+
+	function handleFacebookClicked(){
+		common.open('https://www.facebook.com/Speez.co');
+	}
+
+	function onJoinTextFocusOut(event){
+		_.delay(function(){
+			Layout.instance.enable = true;
+			Layout.instance.resize(game.width, game.height);
+		}, 2000);
+		this.tbxMail
+			.removeClass('focus')
+			.attr('placeholder', this.emailPlaceholderText);
+	}
+
+	function onJoinTextFocusIn(event){
+		Layout.instance.enable = false;
+		this.tbxMail
+			.addClass('focus')
+			.removeClass('error')
+			.attr('placeholder', this.emailPlaceholderFocusText);
+	}
+
+	function onJoinTextKeyDown(event){
+	}
+
+	function onJoinTextChange(event){
+		if(event.keyCode === 13){
+			event.preventDefault();
+			this.tbxMail.blur();
+			var mail = this.tbxMail.val().toLowerCase();
+			if(!mail){
+				return;
+			}
+			if(!/^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/.test(mail)){
+				this.tbxMail.addClass('error').val('').attr('placeholder', 'INVALID EMAIL ADDRESS');
+				return;
+			}
+			this.hideMail();
+			this.showThinking();
+			$.ajax({
+				type: "POST",
+				url: "/mail",
+				data: { mail: mail },
+				success: onMailSeccess.bind(this),
+				error: onMailError.bind(this),
+				complete: this.hideThinking.bind(this),
+			});
+			return;
+		}
+	}
+
+	function onMailSeccess(data){
+		var text = 'Your address is saved.\nYou will receive a notification\nwhen the game is ready!';
+		if(data.isRegistered){
+			text = 'Your address was already saved.\nWe are working really hard\nso you will enjoy Speez very soon!';
+		}
+    	this.savedText = game.add.text(originalWidthCenter, originalHeightCenter, text, {
+			font: "bold 35px Montserrat",
+	        fill: "#000000",
+	        align: "center"
+		});
+		this.savedText.anchor.set(0.5);
+		this.container.addChild(this.savedText);
+	}
+
+	function onMailError(data){
+		var res = data.responseJSON;
+		this.tbxMail
+			.addClass('error')
+			.val('')
+			.attr('placeholder', res[0].msg);
+		this.showMail();
+	}
+
+	function onAreaResized(){
+		var width = 466 * Layout.instance.minScale;
+		var height = 144 * Layout.instance.minScale;
+		var x = this.container.x + (originalWidthCenter - 5) * Layout.instance.minScale - width * 0.5;
+		var y = this.container.y + 530 * Layout.instance.minScale - height * 0.5;
+		this.tbxMail.css({ 
+			left: x + 'px',
+			top: y + 'px',
+			width: width * (detector.mobile() && detector.os().toLowerCase() === 'ios' ? 0.9 : 1) +'px',
+			height: height * (detector.mobile() && detector.os().toLowerCase() === 'ios' ? 0.9 : 1) + 'px',
+			'border-width': (5 * Layout.instance.minScale) + 'px',
+			'font-size': (40 * Layout.instance.minScale) + 'px', 
+			'line-height': (80 * Layout.instance.minScale) + 'px', 
+		});
+		$('form style')
+			.text('input::-webkit-input-placeholder {font-size:' + (35 * Layout.instance.minScale) + 'px}\n' +
+				'input.focus::-webkit-input-placeholder {font-size:' + (35 * Layout.instance.minScale) + 'px}\n' +
+				'input.error::-webkit-input-placeholder {font-size:' + (35 * Layout.instance.minScale) + 'px}');
+	}
+
+	return state;
+
+})();
+
+
+
+
+
+
+
+;// main.js
 var board;
 var mainState = (function(){
 	var graphics;
@@ -7273,6 +7585,8 @@ var preloadState = (function(){
 
 	function setFinished(){
 		if(++finished === 2){
+			console.error('VERSION ' + config.version);
+			console.error(config);
 			if(config.isPlayer){
 				game.state.start('main');
 			} else {
@@ -7330,34 +7644,34 @@ var preloadState = (function(){
 			};
 
 			// *** Card ***
-			// pickup
-			game.load.audio('card/pickup', ['audio/fx/card/pickup.wav']);
-			// draw
-			game.load.audio('card/draw', ['audio/fx/card/draw.wav']);
-			// return
-			game.load.audio('card/return', ['audio/fx/card/return.wav']);
-			// place board
-			game.load.audio('card/placeBoard', ['audio/fx/card/placeBoard.wav']);
-			// place overlap
-			game.load.audio('card/placeOverlap', ['audio/fx/card/placeOverlap.wav']);
-			// board success
-			game.load.audio('card/boardSuccess', ['audio/fx/card/boardSuccess.wav']);
-			// board failed
-			game.load.audio('card/boardFailed', ['audio/fx/card/boardFailed.wav']);
-			// overlap success
-			game.load.audio('card/overlapSuccess', ['audio/fx/card/overlapSuccess.wav']);
-			// win
-			game.load.audio('win/win', ['audio/fx/win/win.mp3']);
-			// lose
-			game.load.audio('lose/lose', ['audio/fx/lose/lose.wav']);
+			// // pickup
+			// game.load.audio('card/pickup', ['audio/fx/card/pickup.wav']);
+			// // draw
+			// game.load.audio('card/draw', ['audio/fx/card/draw.wav']);
+			// // return
+			// game.load.audio('card/return', ['audio/fx/card/return.wav']);
+			// // place board
+			// game.load.audio('card/placeBoard', ['audio/fx/card/placeBoard.wav']);
+			// // place overlap
+			// game.load.audio('card/placeOverlap', ['audio/fx/card/placeOverlap.wav']);
+			// // board success
+			// game.load.audio('card/boardSuccess', ['audio/fx/card/boardSuccess.wav']);
+			// // board failed
+			// game.load.audio('card/boardFailed', ['audio/fx/card/boardFailed.wav']);
+			// // overlap success
+			// game.load.audio('card/overlapSuccess', ['audio/fx/card/overlapSuccess.wav']);
+			// // win
+			// game.load.audio('win/win', ['audio/fx/win/win.mp3']);
+			// // lose
+			// game.load.audio('lose/lose', ['audio/fx/lose/lose.wav']);
 
-			// *** achievement ***
-			// last
-			game.load.audio('achievement/last1', ['audio/fx/achievement/last1.wav']);
-			game.load.audio('achievement/last5', ['audio/fx/achievement/last5.wav']);
-			// screw
-			game.load.audio('achievement/screw', ['audio/fx/achievement/screw.wav']);
-			game.load.audio('achievement/screwed', ['audio/fx/achievement/screwed.wav']);
+			// // *** achievement ***
+			// // last
+			// game.load.audio('achievement/last1', ['audio/fx/achievement/last1.wav']);
+			// game.load.audio('achievement/last5', ['audio/fx/achievement/last5.wav']);
+			// // screw
+			// game.load.audio('achievement/screw', ['audio/fx/achievement/screw.wav']);
+			// game.load.audio('achievement/screwed', ['audio/fx/achievement/screwed.wav']);
 
 		},
 

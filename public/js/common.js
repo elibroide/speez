@@ -8,7 +8,7 @@ var common = {
 		if(gameOrientation === targetOrientation){
 			return;
 		}
-		if(detector.mobile() && !config.isFireTV){
+		if(config.platform === 'mobile'){
 			screen.lockOrientation(targetOrientation);
 		}
 		console.log('Flipping ' + gameOrientation + ' to ' + targetOrientation);
@@ -331,7 +331,7 @@ var common = {
 					common.open('https://www.facebook.com/Speez.co');
 				});
 				facebook.anchor.set(0, 1);
-				var text = game.add.text(25, originalHeight - facebook.height, 'Feedback', {
+				var text = game.add.text(25, originalHeight - facebook.height, 'Feedback - ' + config.platform, {
 					font: '25px FontAwesome',
 					fill: '#000000',
 					align: 'center',

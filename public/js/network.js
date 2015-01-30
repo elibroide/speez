@@ -21,11 +21,13 @@ var Network = (function(){
 
 	function onConnect(){
 		// game.state.load('menu');
+		console.log('Connected');
 	}
 
-	function onDisconnect(){
+	function onDisconnect(data){
 		player = null;
 		stage = null;
+		console.log('Disconnected');
 		game.state.start('main');
 	}
 

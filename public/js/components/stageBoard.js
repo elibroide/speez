@@ -102,9 +102,9 @@ com.speez.components.StageBoard = (function(){
 	}
 
 	function onSetCardPartComplete(oldCard){
-		if(oldCard){
-			oldCard.destroy();
-		}
+		// if(oldCard){
+		// 	oldCard.destroy();
+		// }
 	}
 
 	function onSetCardComplete(incomingEffect){
@@ -145,12 +145,12 @@ com.speez.components.StageBoard = (function(){
 			return;
 		}
 
-		var incomingEffect = new com.speez.components.IncomingEffect(_.extend({
-			color: this.options.color,
-			name: 'board' + this.options.color.toString(16),
-			blurColor: common.addHsl(this.options.color, 0.1),
-		}, this.effectOptions));
-		this.addChildAt(incomingEffect, 0);
+		// var incomingEffect = new com.speez.components.IncomingEffect(_.extend({
+		// 	color: this.options.color,
+		// 	name: 'board' + this.options.color.toString(16),
+		// 	blurColor: common.addHsl(this.options.color, 0.1),
+		// }, this.effectOptions));
+		// this.addChildAt(incomingEffect, 0);
 
 		var currentCard = parseInt(oldCard.text);
 		var newCard = parseInt(card)
@@ -161,12 +161,12 @@ com.speez.components.StageBoard = (function(){
 		var targetY = this.options.radius + this.text.height;
 		this.text.y = targetY * direction;
 
-		var timeline = new TimelineLite({ onComplete: onSetCardComplete, onCompleteScope: this, onCompleteParams: [incomingEffect] });
+		var timeline = new TimelineLite({ onComplete: onSetCardComplete, onCompleteScope: this, onCompleteParams: [] });
 		timeline.to(oldCard, this.options.setCardTime, { onComplete: onSetCardPartComplete, onCompleteScope: this, onCompleteParams: [oldCard], y: -targetY * direction, ease: Linear.noEase }, 0);
 		timeline.to(this.text, this.options.setCardTime, { y: 0, ease: Linear.noEase }, 0);
 
 		timeline.to(this.background, this.options.setCardTime, { alpha: 1, ease: Sine.easeOut }, 0);
-		timeline.add(incomingEffect.animate(this.animationOptions), this.options.setCardTime + '-=' + 0.5);
+		// timeline.add(incomingEffect.animate(this.animationOptions), this.options.setCardTime + '-=' + 0.5);
 		timeline.to(this.background, this.options.setCardTime, { alpha: this.options.backgroundAlpha, ease: Sine.easeIn }, this.options.setCardTime);
 
 		timeline.to(this.circleScales, this.options.setCardTime, { x: 1.4, y: 1.4, ease: Sine.easeOut }, 0);

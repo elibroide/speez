@@ -80,7 +80,6 @@ function middleLog(req, next){
 function getRoutes(app){
 	app.io.sockets.on('connection', function(socket){
 		console.log(socket.handshake.headers);
-		console.log(socket.request);
 		connect.call(socket);
 	});
 	app.io.use(/^speed/, middleLog);

@@ -6,7 +6,7 @@ var bootState = (function(){
 
 	function setSocket(){
 		//// Local
-		console.log('Trying to connect to ' + config.address)
+		console.log('Trying to connect to ' + config.address);
 
 		network = new Network();
 	}
@@ -56,11 +56,13 @@ var bootState = (function(){
 
 		create: function(){
     		game.stage.disableVisibilityChange = true;
-			setSocket();
-
 			setScale();
-
-  			game.state.start('preload');
+			if(!config.isUnderConstruction){
+				setSocket();
+  				game.state.start('preload');
+			} else {
+				game.state.start('mail');
+			}
 		},
 
 		render: function(){

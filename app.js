@@ -2,6 +2,7 @@ var _ = require('underscore');
 var express = require('express.io', {
     'heartbeat timeout': 100,
 });
+var expressValidator = require('express-validator');
 var path = require('path');
 var favicon = require('static-favicon');
 var logger = require('morgan');
@@ -9,11 +10,16 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var speed = require('./routes/speed/game');
 
+var mongoose = require('mongoose');
+
 // Initiate
 
 app = express();
 app.http().io();
 require('express.io-middleware')(app);
+
+// DB
+require('./config/database')(app, mongoose)
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -24,15 +30,17 @@ app.set('view engine', 'jade');
 // app.use(logger('debug'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(expressValidator());
 app.use(cookieParser());
 app.use('/bower_components', express.static(path.join(__dirname, 'bower_components')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Routing to endpoints
 var indexRoutes = require('./routes/index');
+app.use('/mail', require('./routes/mail'))
 app.use('/', indexRoutes);
 app.get('/partials/:name', indexRoutes.partials);
-speed.getRoutes(app);
+// speed.getRoutes(app);
 
 // error handlers
 
@@ -64,5 +72,8 @@ app.use(function(err, req, res, next) {
         error: {}
     });
 });
+
+// Echo environment
+console.log('Running ' + app.get('env'));
 
 module.exports = app;

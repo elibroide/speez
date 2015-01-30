@@ -30,11 +30,25 @@
 <body onload="startPhonegapApplication()">
     <script>
         
+        var platformType = 'mobile';        
+        var gameVersion = '0.0.5';
+        var isUnderConstruction = true;
 
         function startPhonegapApplication(){
 
             // Mobile Detection
             detector = new MobileDetect(window.navigator.userAgent);
+            if(window.location.protocol.indexOf('file') === -1){
+                if(window.location.hash.toLowerCase().indexOf('type=firetv') !== -1){
+                    platformType = 'firetv';
+                } else if(window.location.hash.toLowerCase().indexOf('type=player') !== -1){
+                    platformType = 'player';
+                } else if(detector.mobile()){
+                    platformType = 'mobile';
+                } else {
+                    platformType = 'stage';
+                }
+            }
 
             // Viewport
             var metaViewport = '';
@@ -45,6 +59,7 @@
                 } else {
                     metaViewport = '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">';
                 }
+                metaViewport = '<meta name="viewport" content="width=device-width, initial-scale=0.5, maximum-scale=0.5">';
             } else if(window.location.hash.toLowerCase().indexOf('type=firetv') !== -1) {
                 console.log('Setting Firetv Viewport');
                 metaViewport = '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">';

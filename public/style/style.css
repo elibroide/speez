@@ -18,15 +18,31 @@ input {
 	background-color: 'transparent';
 	text-align: center;
 	font-size: 60px;
+	border-style: solid;
+	border-width: 5px;
+	border-radius: 5px;
+	border-color: black;
+}
+
+input#tbxJoin::-webkit-input-placeholder {
+}
+
+input.focus, input.error {
+	line-height: 80px;
+}
+
+input.focus::-webkit-input-placeholder {
+	opacity: 0.5;
+}
+
+input.error::-webkit-input-placeholder {
+	color: red;
+	opacity: 1;
 }
 
 /* Player Lobby */
 
 input#tbxChangeName {
-	border-style: solid;
-    border-width: 5px;
-	border-radius: 5px;
-	border-color: black;
 }
 
 input#tbxChangeName:disabled{
@@ -40,16 +56,8 @@ input#tbxChangeName::-webkit-input-placeholder {
 /* Main Menu */
 
 input#tbxJoin {
-	border-style: solid;
-    border-width: 5px;
 	border-radius: 10px;
-	border-color: black;
-	line-height: 50px;
 	background-color: '#FFD646';
-}
-
-input#tbxJoin.focus, input#tbxJoin.error {
-	line-height: 80px;
 }
 
 input#tbxJoin::-webkit-input-placeholder {
@@ -57,13 +65,16 @@ input#tbxJoin::-webkit-input-placeholder {
 	font-weight: 'bold';
 }
 
-input#tbxJoin.focus::-webkit-input-placeholder {
-	opacity: 0.5;
+/* Mail */
+
+input#tbxMail {
+	border-radius: 10px;
+	background-color: '#FFD646';
 }
 
-input#tbxJoin.error::-webkit-input-placeholder {
-	color: red;
-	opacity: 1;
+input#tbxMail::-webkit-input-placeholder {
+	color: #1D1D1D;
+	font-weight: 'bold';
 }
 
 

@@ -39,20 +39,18 @@ var avatarNames = [
 
 function init(){
 
-
     // set config
     config = {
         dpr: window.devicePixelRatio,
         width: 640,
         height: 960,
         isLocal: true,
+        platform: platformType,
+        isPlayer: platformType === 'player' || platformType === 'mobile',
+        isPackage: window.location.protocol.indexOf('file') > -1,
+        version: gameVersion,
+        isUnderConstruction: isUnderConstruction && window.location.hash.indexOf('user=bb') === -1 && window.location.protocol.indexOf('file') === -1,
     }
-
-    // Identify FireTV
-    config.isFireTV = window.location.hash.toLowerCase().indexOf('type=firetv') !== -1;
-
-    config.isPlayer = window.location.hash.toLowerCase().indexOf('type=player') !== -1 ||
-        (detector.mobile() && !config.isFireTV);
 
     // set size
     originalWidth = config.width;
@@ -61,7 +59,7 @@ function init(){
     originalHeightCenter = originalHeight * 0.5;
 
     // set address
-    if(window.location.protocol.indexOf('file') === 0){
+    if(config.isPackage){
         config.address = 'http://speez.herokuapp.com/';
         config.isPackage = true;
     } else {
@@ -74,9 +72,7 @@ function init(){
 
     // initiate singletones
     var audio = new Audio();
-
     game = new Phaser.Game(window.innerWidth, window.innerHeight, Phaser.CANVAS, '');
-
     game.stageColor = function(color){
         if(color !== undefined){
             game.stage.backgroundColor = common.getRgb(color);
@@ -84,39 +80,25 @@ function init(){
         return game.stage.backgroundColor;
     }
 
-    game.state.add('boot', bootState);
-    game.state.add('preload', preloadState);
-    game.state.add('main', mainState);
-    game.state.add('player', playerState);
-    game.state.add('playerFinish', playerFinishState);
-    game.state.add('lobby', lobbyState);
-    game.state.add('lobbyPlayer', lobbyPlayerState);
-    game.state.add('stage', stageState);
-    game.state.add('stageFinish', stageFinishState);
-
+    // debug config
     console.log(config);
+
+    // load game states
+    game.state.add('boot', bootState);
+    if(config.isUnderConstruction){
+        game.state.add('mail', mailState);
+    } else {
+        game.state.add('preload', preloadState);
+        game.state.add('main', mainState);
+        game.state.add('player', playerState);
+        game.state.add('playerFinish', playerFinishState);
+        game.state.add('lobby', lobbyState);
+        game.state.add('lobbyPlayer', lobbyPlayerState);
+        game.state.add('stage', stageState);
+        game.state.add('stageFinish', stageFinishState);
+    }
     game.state.start('boot');
-
 }
-// window.addEventListener('load', initGame);
-
-// Listen for orientation changes
-window.addEventListener("orientationchange", function() {
-    // Announce the new orientation number
-    
-}, false);
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
